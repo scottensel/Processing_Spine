@@ -1,0 +1,1 @@
+/mnt/d/SBSN/Data/Spine/SBSN_M_001/func/func1/moco_params_x_test.nii.gz

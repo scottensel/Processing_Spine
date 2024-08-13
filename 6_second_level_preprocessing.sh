@@ -185,6 +185,140 @@ for s in "${sub[@]}"; do
 
             tput setaf 2; echo "Moving files " $s"/func/func"$d	
 
+            cp -r "$DIREC"reg/"" $DIREC$s"/func/func"$d"/level_one_FLOB.feat/"
+            
+            # these have to be the same size across all subject because they get concatenated in the 4th dimension
+            # change this to the PAM50 template
+            cp ../../../template/PAM50_t2s.nii.gz level_one_FLOB.feat/reg/standard.nii.gz
+            cp ../../../template/PAM50_t2s.nii.gz level_one_FLOB.feat/reg/example_func.nii.gz
+
+            cp anat2template.nii.gz level_one_FLOB.feat/example_func.nii.gz
+            cp anat2template.nii.gz level_one_FLOB.feat/mean_func.nii.gz
+            
+            mkdir level_one_FLOB.feat/reg_standard
+            mkdir level_one_FLOB.feat/reg_standard/reg
+            mkdir level_one_FLOB.feat/reg_standard/stats
+
+            totalCopes=(1 2 3)
+            for copeNum in "${totalCopes[@]}"; do
+                
+                # do two different if statements for both the cope and var cope to avoid outlier cases of overwriting
+                if [ -f "level_one_FLOB.feat/stats/subjectSpace_cope"$copeNum".nii.gz" ]; then
+
+                    tput setaf 1; 
+                    echo $DIREC$s"/func/func"$d"/level_one_FLOB.feat/stats/cope"$copeNum
+
+                    tput setaf 6;
+                    # files have already been transofrmed
+                    # subject space images are original images so just apply warps to them
+                    # no need to rename files again
+                    sct_apply_transfo -i "level_one_FLOB.feat/stats/subjectSpace_cope"$copeNum".nii.gz" -d ../../../template/PAM50_t2s.nii.gz -w warp_anat2template.nii.gz -o "level_one_FLOB.feat/stats/cope"$copeNum".nii.gz"
+
+                    tput setaf 1;  
+                    echo "Error checking cope"$copeNum
+                    tput setaf 6;
+
+                    # this is where second level always fails
+                    # so I run the command myslef to error check and reapply the transoformation if this fails
+                    # it will create a new file if passes and nothing if fails
+                    flirt -ref level_one_FLOB.feat/reg/standard -in "level_one_FLOB.feat/stats/cope"$copeNum".nii.gz" -out "level_one_FLOB.feat/reg_standard/stats/cope"$copeNum".nii.gz" -applyxfm -init level_one_FLOB.feat/reg/example_func2standard.mat -interp trilinear -datatype float
+                    
+
+
+                else 
+
+                    # rename file then apply a transform to it so its located in PAM50 space
+                    mv "level_one_FLOB.feat/stats/cope"$copeNum".nii.gz" "level_one_FLOB.feat/stats/subjectSpace_cope"$copeNum".nii.gz"
+
+                    tput setaf 1; 
+                    echo $DIREC$s"/func/func"$d"/level_one_FLOB.feat/stats/cope"$copeNum
+
+                    tput setaf 6;
+                    # files have already been transofrmed
+                    # subject space images are original images so just apply warps to them
+                    # no need to rename files again
+                    sct_apply_transfo -i "level_one_FLOB.feat/stats/subjectSpace_cope"$copeNum".nii.gz" -d ../../../template/PAM50_t2s.nii.gz -w warp_anat2template.nii.gz -o "level_one_FLOB.feat/stats/cope"$copeNum".nii.gz"
+
+                    tput setaf 1;  
+                    echo "Error checking cope"$copeNum
+                    tput setaf 6;
+                    
+                    # this is where second level always fails
+                    # so I run the command myslef to error check and reapply the transoformation if this fails
+                    # it will create a new file if passes and nothing if fails
+                    flirt -ref level_one_FLOB.feat/reg/standard -in "level_one_FLOB.feat/stats/cope"$copeNum".nii.gz" -out "level_one_FLOB.feat/reg_standard/stats/cope"$copeNum".nii.gz" -applyxfm -init level_one_FLOB.feat/reg/example_func2standard.mat -interp trilinear -datatype float
+
+                fi
+
+                # another if statement that does same as above except for varcope file
+                if [ -f "level_one_FLOB.feat/stats/subjectSpace_varcope"$copeNum".nii.gz" ]; then
+
+                    tput setaf 1;  
+                    echo $DIREC$s"/func/func"$d"/level_one_FLOB.feat/stats/varcope"$copeNum
+
+                    tput setaf 6;
+                    # files have already been transofrmed
+                    # subject space images are original images so just apply warps to them
+                    # no need to rename files again
+                    sct_apply_transfo -i "level_one_FLOB.feat/stats/subjectSpace_varcope"$copeNum".nii.gz" -d ../../../template/PAM50_t2s.nii.gz -w warp_anat2template.nii.gz -o "level_one_FLOB.feat/stats/varcope"$copeNum".nii.gz"
+
+                    tput setaf 1;  
+                    echo "Error checking varcope"$copeNum
+                    tput setaf 6;   
+                       
+                    # this is where second level always fails
+                    # so I run the command myslef to error check and reapply the transoformation if this fails
+                    # it will create a new file if passes and nothing if fails
+                    flirt -ref level_one_FLOB.feat/reg/standard -in "level_one_FLOB.feat/stats/varcope"$copeNum".nii.gz" -out "level_one_FLOB.feat/reg_standard/stats/varcope"$copeNum".nii.gz" -applyxfm -init level_one_FLOB.feat/reg/example_func2standard.mat -interp trilinear -datatype float
+
+                else
+                    mv "level_one_FLOB.feat/stats/varcope"$copeNum".nii.gz" "level_one_FLOB.feat/stats/subjectSpace_varcope"$copeNum".nii.gz"
+
+                    tput setaf 1;  
+                    echo $DIREC$s"/func/func"$d"/level_one_FLOB.feat/stats/varcope"$copeNum
+
+                    tput setaf 6;
+                    # files have already been transofrmed
+                    # subject space images are original images so just apply warps to them
+                    # no need to rename files again
+                    sct_apply_transfo -i "level_one_FLOB.feat/stats/subjectSpace_varcope"$copeNum".nii.gz" -d ../../../template/PAM50_t2s.nii.gz -w warp_anat2template.nii.gz -o "level_one_FLOB.feat/stats/varcope"$copeNum".nii.gz"
+
+                    tput setaf 1;  
+                    echo "Error checking varcope"$copeNum
+                    tput setaf 6;   
+             
+                    # this is where second level always fails
+                    # so I run the command myslef to error check and reapply the transoformation if this fails
+                    # it will create a new file if passes and nothing if fails
+                    flirt -ref level_one_FLOB.feat/reg/standard -in "level_one_FLOB.feat/stats/varcope"$copeNum".nii.gz" -out "level_one_FLOB.feat/reg_standard/stats/varcope"$copeNum".nii.gz" -applyxfm -init level_one_FLOB.feat/reg/example_func2standard.mat -interp trilinear -datatype float
+
+                fi
+
+            done
+
+            if [ -f level_one_FLOB.feat/stats/subjectSpace_mask.nii.gz ]; then
+
+                cp ../../../template/PAM50_cervical_cord.nii.gz level_one_FLOB.feat/mask.nii.gz
+                # why we dont use this transform below and use the one above instead
+                #sct_apply_transfo -i level_one_force_FLOB.feat/subjectSpace_mask.nii.gz -d ../../../template/PAM50_t2s.nii.gz -w warp_anat2template.nii.gz -o level_one_force_FLOB.feat/mask.nii.gz
+
+            else
+
+                # i think this mask may have to be replaced with the PAM50 mask that we want to use
+                mv level_one_FLOB.feat/mask.nii.gz level_one_FLOB.feat/subjectSpace_mask.nii.gz
+                cp ../../../template/PAM50_cervical_cord.nii.gz level_one_FLOB.feat/mask.nii.gz
+
+            fi
+
+        elif [ "$ind" == "99" ]; then
+
+            tput setaf 2; echo "Prepare second level analysis for GLM " $s"/func/func"$d
+            tput sgr0; 
+
+            cd $DIREC$s"/func/func"$d"/"
+
+            tput setaf 2; echo "Moving files " $s"/func/func"$d 
+
             cp -r "$DIREC"reg/"" $DIREC$s"/func/func"$d"/level_one_force_FLOB.feat/"
             
             # these have to be the same size across all subject because they get concatenated in the 4th dimension

@@ -8,7 +8,7 @@ addpath('D:\NHP_code\cbiNifti')
 
 % varibales to set up before
 subName = {'SBSN_H_001','SBSN_H_002','SBSN_H_003','SBSN_H_004','SBSN_H_007','SBSN_H_008','SBSN_H_010'}; 
-zScore = 2.3;
+zScore = 1.5;
 
 copeFile = 'cope1.feat';
 % copeFile = 'cope4.feat';

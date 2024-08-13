@@ -48,25 +48,22 @@ for s in "${sub[@]}"; do
             if [ "$ind" -lt "5" ]; then
 
                 # Generate EV for outliers
-                if [ ! -f outliers.png ]; then
+                #if [ ! -f outliers.png ]; then
     
-                    echo "Generate motion outliers..."
-                    tput sgr0
-        
-                    ## generate the EVs (regressors) for moco fmri and create outliers.txt using the spinal cord mask
-                    fsl_motion_outliers -i fmri_spine_moco.nii.gz -o outliers.txt —m fmri_spine_moco_mean_seg_corr.nii.gz -p outliers.png --dvars --nomoco
+                echo "Generate motion outliers..."
+                tput sgr0
     
-                fi
+                ## generate the EVs (regressors) for moco fmri and create outliers.txt using the spinal cord mask
+                fsl_motion_outliers -i fmri_spine_moco.nii.gz -o outliers.txt —m fmri_spine_moco_mean_seg_corr.nii.gz -p outliers.png --dvars --nomoco
+    
+                #fi
     
                 tput setaf 2; echo "Prepare nuisance regressors file..."
                 tput sgr0
     
                 ## creates text file will all the regressor files
                 ls -1 `${FSLDIR}/bin/imglob -extensions ${DIREC}${s}/physio/physio${d}/${s}ev0*` > regressors_evlist.txt
-    
-                ## add CSF mask
-                #fslcpgeom fmri_spine_moco.nii.gz "$DIREC$s"/physio/physio"$d"/${s}_csf*""
-                #echo "$DIREC$s"/physio/physio"$d"/${s}_csf*"" >> regressors_evlist.txt # Add CSF mask
+
     
                 # Copy header information from moco functional to moco parameters
                 sct_image -i fmri_spine_moco.nii.gz -copy-header moco_params_x.nii.gz -o moco_params_x.nii.gz
@@ -88,8 +85,10 @@ for s in "${sub[@]}"; do
             elif [ "$ind" == "4" ]; then
                 templateFile="template_design.fsf"
             elif [ "$ind" == "5" ]; then
-                templateFile="template_design_force_FLOB.fsf"
+                templateFile="template_design_FLOB.fsf"
             elif [ "$ind" == "6" ]; then
+                templateFile="template_design_force_FLOB.fsf"
+            elif [ "$ind" == "7" ]; then
                 templateFile="template_design_force_FLOB.fsf"
             fi
 
@@ -165,6 +164,16 @@ for s in "${sub[@]}"; do
                                         -e 's@OUTLPATH@'$DIREC$s"/func/func"$d"/outliers.txt"'@g' <$i> design_denoised.fsf
 
                 elif [ "$ind" == "5" ]; then
+
+                    # this is editing the text of the files
+                    sed -e 's@OUTDIR@'"level_one_FLOB"'@g' \
+                                        -e 's@DATAPATH@'$DIREC$s"/func/func"$d"/fmri_spine_moco_denoised_plusmean_smooth.nii.gz"'@g' \
+                                        -e 's@OUTLYN@'"1"'@g' \
+                                        -e 's@NPTS@'"$(fslnvols $DIREC$s"/func/func"$d"/fmri_spine_moco.nii.gz")"'@g' \
+                                        -e 's@EV_TITLE@'GripTask'@g' \
+                                        -e 's@EV_FILE@'$DIREC$s"/task/task"$d"/events.txt"'@g' <$i> design_levelone_FLOB.fsf
+
+                elif [ "$ind" == "6" ]; then
                     tput setaf 2; echo "Prepare for by FEAT on denoised data " $s"/func/func"$d
                     tput sgr0;
 
@@ -178,7 +187,7 @@ for s in "${sub[@]}"; do
                                         -e 's@EV_TITLE3@'70'@g' \
                                         -e 's@EV_FILE3@'$DIREC$s"/task/task"$d"/force70.txt"'@g' <$i> design_levelone_force_FLOB.fsf
 
-                elif [ "$ind" == "6" ]; then
+                elif [ "$ind" == "7" ]; then
                     tput setaf 2; echo "Prepare for by FEAT on smoothed denoised data " $s"/func/func"$d
                     tput sgr0; 
 
@@ -243,9 +252,16 @@ for s in "${sub[@]}"; do
                 tput sgr0; 
                 
                 # Run the analysis using the fsf file
-                feat design_levelone_force_FLOB.fsf
+                feat design_levelone_FLOB.fsf
 
             elif [ "$ind" == "6" ]; then
+                tput setaf 2; echo "Run first level FLOB force analysis for " $s"/func/func"$d
+                tput sgr0; 
+                
+                # Run the analysis using the fsf file
+                feat design_levelone_force_FLOB.fsf
+
+            elif [ "$ind" == "7" ]; then
                 tput setaf 2; echo "Run first level smoothed FLOB force analysis for " $s"/func/func"$d
                 tput sgr0; 
                 

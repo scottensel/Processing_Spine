@@ -32,7 +32,6 @@ start=`date +%s`
 # load in function that has paths to subject
 . /mnt/d/SBSN/Processing_Spine/path_to_subjects.sh 
 
-
 tput setaf 6; 
 echo -n "Enter the index of the step to perform (1 = Prepare recordings, 2 = Generate EVs): "
 tput sgr0;
@@ -57,7 +56,13 @@ for s in "${sub[@]}"; do
 			elif [ "$ind" == "2" ]; then
 				tput setaf 2; echo "EVs generation in " $s"/func/func"$d
 				tput sgr0; 
-                
+
+                if [ ! -f $DIREC$s"/func/func"$d"/fmri_spine_moco_mean_CSF_seg_corr.nii.gz" ]; then
+
+                    cp $DIREC$s"/func/func"$d"/fmri_spine_moco_mean_CSF_seg.nii.gz" $DIREC$s"/func/func"$d"/fmri_spine_moco_mean_CSF_seg_corr.nii.gz"
+
+                fi
+
                 # creating EVs (regressors) to model the physiological noise, of cardiac and respiration 
                 $FSLDIR/bin/pnm_evs -i $DIREC$s"/func/func"$d"/fmri_spine_moco.nii.gz" -c $s"_card.txt" -r $s"_resp.txt" -o $s --tr=2.2 --oc=4 --or=4 --multc=2 --multr=2 --csfmask=$DIREC$s"/func/func"$d"/fmri_spine_moco_mean_CSF_seg_corr.nii.gz" --sliceorder=interleaved_up --slicetiming=slice_times.txt -v
                 #$FSLDIR/bin/pnm_evs -i $DIREC$s"/func/func"$d"/fmri_spine_moco.nii.gz" -c $s"_card.txt" -r $s"_resp.txt" -o $s --tr=2.2 --oc=4 --or=4 --multc=2 --multr=2 --csfmask=$DIREC$s"/func/func"$d"/fmri_spine_moco_mean_CSF_seg_corr.nii.gz" --slicetiming=slice_matrix.txt -v

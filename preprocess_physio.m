@@ -7,7 +7,7 @@ clear all
 %%% SPINE
 
 % varibales to set up before
-subName = 'SBSN_H_010';
+subName = 'SBSN_H_102';
 disp(subName)
 
 volRemoved = 5;
@@ -27,6 +27,11 @@ slice_number_folder = dir(direc2);
 % these get removed from the original length of the images
 
 for folder = 3:length(physio_folders)
+
+    if contains(physio_folders(folder).name, 'physio0')
+        continue
+    end
+    
     % here its just opening the txt file we need to parse through which has
     % all of our information
     fid = fopen(fullfile(direc, physio_folders(folder).name, 'test.txt'),'rt');

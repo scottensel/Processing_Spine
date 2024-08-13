@@ -33,7 +33,7 @@ start=`date +%s`
 
 
 tput setaf 6; 
-echo -n "Enter the index of the step to perform (1 = Crop Spine, 2 = MOCO, 3 = TSNR, 4 = Initial Segmentation, 5 = Label Vertebrae , 6 = Registering to template): "
+echo -n "Enter the index of the step to perform (1 = Crop Spine, 2 = MOCO, 3 = Initial Segmentation, 4 = Label Vertebrae , 5 = Registering to template, 6 = TSNR/SSNR): "
 tput sgr0;
 read ind
 
@@ -53,8 +53,8 @@ for s in "${sub[@]}"; do
 
                 # this is for seperating the spine from the brain and then does some preprocessing steps
 
+                # create mean image
                 sct_maths -i fmri.nii.gz -mean t -o fmri_mean.nii.gz
-                # create a binary image of the entire scan and crop the bold images
 
                 # do original crop
                 sct_crop_image -i fmri_mean.nii.gz -g 1
@@ -79,9 +79,14 @@ for s in "${sub[@]}"; do
 				tput setaf 2; echo "MOCO in " "$DIREC$s"/func/"$d"
 				tput sgr0; 
 
+                # motion correction flirt first
+                mcflirt -in fmri_spine.nii.gz -out fmri_spine_mcflirt -refvol 0 -plots -report
+
                 # do motion correction
-                sct_fmri_moco -i fmri_spine.nii.gz -m fmri_spine_mask.nii.gz -g 1 -r 1
+                sct_fmri_moco -i fmri_spine_mcflirt.nii.gz -m fmri_spine_mask.nii.gz -g 1 -r 1
                 
+                cp fmri_spine_mcflirt_moco.nii.gz fmri_spine_moco.nii.gz 
+
                 # remove extra volumes
                 if [ $(fslnvols fmri_spine_moco.nii.gz) -eq 163 ]; then
                     #sct_image -i fmri_spine.nii.gz -remove-vol 0,1,2,3,4
@@ -93,22 +98,17 @@ for s in "${sub[@]}"; do
                 # now take the mean of the motion corrected spine image
                 sct_maths -i fmri_spine_moco.nii.gz -mean t -o fmri_spine_moco_mean.nii.gz
 
-			# 3 - TSNR
-			elif [ "$ind" == "3" ]; then
-				tput setaf 2; echo "Compute TSNR in " "$DIREC$s"/func/"$d"
-				tput sgr0; 
-            
-                # compute tsnr around just spine
-                sct_fmri_compute_tsnr -i fmri_spine_moco.nii.gz
-
 
 			# 4 - INITIAL SEGMENTATION
-			elif [ "$ind" == "4" ]; then
+			elif [ "$ind" == "3" ]; then
 				tput setaf 2; echo "Create automatic segmentation and then manually correct " "$DIREC$s"/func/"$d"
 				tput sgr0; 
             
-                sct_deepseg_sc -i fmri_spine_moco_mean.nii.gz  -c t2s #-qc "$DIREC$s"/func/"$d"
+                #sct_deepseg_sc -i fmri_spine_moco_mean.nii.gz -c t2s #-qc "$DIREC$s"/func/"$d"
                 # now YOU MUST go in and manually correct this autosegmentation
+
+                # use this as the segementation as its better
+                sct_deepseg -i fmri_spine_moco_mean.nii.gz -o test_epi_seg.nii.gz -task seg_sc_epi
 
                 # rename because getting CSF creates same file name
                 mv fmri_spine_moco_mean_seg.nii.gz fmri_spine_moco_mean_deepseg.nii.gz 
@@ -118,15 +118,27 @@ for s in "${sub[@]}"; do
                 
                 #replace propseg with deepseg one
                 rm fmri_spine_moco_mean_seg.nii.gz
-                mv fmri_spine_moco_mean_deepseg.nii.gz fmri_spine_moco_mean_seg.nii.gz  
+                #mv fmri_spine_moco_mean_deepseg.nii.gz fmri_spine_moco_mean_seg.nii.gz  
+                mv test_epi_seg.nii.gz fmri_spine_moco_mean_seg.nii.gz
 
+                # dilate the mask and add one so that way we can add it to the CSF mask
+                # this will allow us to bin it and remove overlapping segmentations and make it easier
+                # to corrrect
+                sct_maths -i fmri_spine_moco_mean_seg.nii.gz -dilate 1 -shape disk -dim 2 -o fmri_spine_moco_mean_seg_dilate.nii.gz #-qc $DIREC$s"/anat/"
+
+                fslmaths fmri_spine_moco_mean_CSF_seg.nii.gz -sub fmri_spine_moco_mean_seg_dilate.nii.gz fmri_spine_moco_mean_CSF_seg.nii.gz
+
+                sct_maths -i fmri_spine_moco_mean_CSF_seg.nii.gz -bin 0.5 -o fmri_spine_moco_mean_CSF_seg.nii.gz
+
+                cp fmri_spine_moco_mean_seg.nii.gz fmri_spine_moco_mean_seg_corr.nii.gz
+                cp fmri_spine_moco_mean_CSF_seg.nii.gz fmri_spine_moco_mean_CSF_seg_corr.nii.gz
                 # now manually correct the CSF mask
                 				
                 tput setaf 6; echo "NOW YOU MUST MANUAL CORRECT THESE SEGMENTATIONS"
 				tput sgr0; 
 
 			# 5 - LABEL THE VERTEBRAE
-			elif [ "$ind" == "5" ]; then
+			elif [ "$ind" == "4" ]; then
 				tput setaf 2; echo "Use manual segmentation in " "$DIREC$s"/func/"$d"
 				tput sgr0; 
 
@@ -138,9 +150,13 @@ for s in "${sub[@]}"; do
                       -msg "Click at the posterior tip of C3/C4 & C7/T1 inter-vertebral disc"
 
 			# 6 - REGISTER TO TEMPLATE
-			elif [ "$ind" == "6" ]; then
+			elif [ "$ind" == "5" ]; then
 				tput setaf 2; echo "Use manual segmentation in " "$DIREC$s"/func/"$d"
 				tput sgr0; 
+                
+                sct_image -i fmri_spine_moco_mean.nii.gz -set-qform-to-sform
+                sct_image -i fmri_spine_moco_mean_seg_corr.nii.gz -set-qform-to-sform
+                sct_image -i fmri_labels.nii.gz -set-qform-to-sform
 
                 sct_label_vertebrae -i fmri_spine_moco_mean.nii.gz -s fmri_spine_moco_mean_seg_corr.nii.gz -c t2 -discfile fmri_labels.nii.gz #-qc $DIREC$s"/anat/"
                
@@ -148,10 +164,51 @@ for s in "${sub[@]}"; do
                 #sct_register_to_template -i fmri_spine_moco_mean.nii.gz -s fmri_spine_moco_mean_seg_corr.nii.gz -ldisc fmri_labels.nii.gz -c t2 -param step=1,type=seg,algo=centermass:step=2,type=im,algo=syn,metric=CC,slicewise=1,smooth=0,iter=3 #-qc "$DIREC$s"/func/"$d"
                 sct_register_to_template -i fmri_spine_moco_mean.nii.gz -s fmri_spine_moco_mean_seg_corr.nii.gz -ldisc fmri_labels.nii.gz -ref subject -c t2 -param step=1,type=seg,algo=centermass:step=2,type=im,algo=syn,metric=CC,slicewise=1,smooth=0,iter=3
 
+
+            # 3 - TSNR
+            elif [ "$ind" == "6" ]; then
+                tput setaf 2; echo "Compute TSNR and sSNR in " "$DIREC$s"/func/"$d"
+                tput sgr0; 
+
+                # compute tsnr around just spine
+                sct_fmri_compute_tsnr -i fmri_spine_moco.nii.gz -o fmri_spine_moco_mean_tsnr_subject.nii.gz
+
+                sct_apply_transfo -i fmri_spine_moco_mean_tsnr_subject.nii.gz -d ../../../template/PAM50_t2s.nii.gz -w warp_anat2template.nii.gz -o fmri_spine_moco_mean_tsnr_PAM50.nii.gz
+                
+                sct_crop_image -i fmri_spine_moco_mean_tsnr_PAM50.nii.gz -m ../../../template/PAM50_cervical_cord.nii.gz -b 0 -o fmri_spine_moco_mean_tsnr_PAM50.nii.gz
+#                if [ ! -f mask_air_label.nii.gz ]; then
+    
+                # label a voxel that has the area only surrounded by air
+                #sct_label_utils -i fmri_spine_moco_mean.nii.gz -create-viewer 1 -o mask_air_label.nii.gz \
+                #      -msg "Click voxel in the air. Make sure to scroll to side of image to not include brain"
+
+                #fslmaths fmri_spine_moco_mean.nii.gz -mul 0 mask_zero.nii.gz 
+
+                #fslmaths mask_zero.nii.gz -add mask_air_label.nii.gz mask_air.nii.gz
+
+                # creates a sphere around the point you just labeled 
+                #sct_create_mask -i fmri_spine_moco_mean.nii.gz -p point,mask_air_label.nii.gz -size 3 -o mask_air.nii.gz
+
+                # converts image type to correct mask type
+                #sct_image -i mask_air.nii.gz -type uint8 -o mask_air.nii.gz 
+
+                # this crops the image based on the mask used for calculation and uses it to crop the make you just created
+                # the mask and noise mask must have same z-span values which is why this is needed
+                #sct_crop_image -i mask_air.nii.gz -m fmri_spine_moco_mean_seg_corr.nii.gz -dilate 500x500x0 -b 0 -o mask_air.nii.gz
+
+                #sct_compute_snr -i fmri_spine_moco_mean.nii.gz -m fmri_spine_moco_mean_seg_corr.nii.gz \
+                #    -method single -m-noise mask_air.nii.gz -rayleigh 1 -o fmri_spine_moco_mean_ssnr_single -v 1
+
+                sct_compute_snr -i fmri_spine_moco.nii.gz -m fmri_spine_moco_mean_seg_corr.nii.gz \
+                    -method mult -o fmri_spine_moco_mean_ssnr_mult -v 1
+
+                sct_compute_snr -i fmri_spine_moco.nii.gz -m fmri_spine_moco_mean_seg_corr.nii.gz \
+                    -method diff -vol 81,82 -o fmri_spine_moco_mean_ssnr_diff -v 1
+
             else
 
 				tput setaf 1; 
-                echo "Index not valid (should be 1 to 5)"
+                echo "Index not valid (should be 1 to 6)"
 				tput sgr0; 
 
 			fi

@@ -55,7 +55,15 @@ for i in ${!myRuns[@]}; do
 
     if [ ${myRuns[$i]} -gt 9 ]; then
 
-        sub+=("${mySub[$indSub]}"0"${myRuns[$i]}")
+        if [ ${myRuns[$i]} -gt 99 ]; then
+
+            sub+=("${mySub[$indSub]}${myRuns[$i]}")
+
+        else
+
+            sub+=("${mySub[$indSub]}"0"${myRuns[$i]}")
+
+        fi
     
     else
 

@@ -254,9 +254,15 @@ for s in "${sub[@]}"; do
             if [ "$ind" == "3" ]; then
                 levelFile="level_one_force_FLOB.feat"
                 outputName="level_two_force_FLOB"
+                templateName="second_level_force_FLOB_template.fsf"
             elif [ "$ind" == "4" ]; then
                 levelFile="level_one_force_smooth_FLOB.feat"
                 outputName="level_two_force_FLOB_smooth"
+                templateName="second_level_force_FLOB_template.fsf"
+            elif [ "$ind" == "5" ]; then
+                levelFile="level_one_FLOB.feat"
+                outputName="level_two_FLOB"
+                templateName="second_level_FLOB_template.fsf"
             fi
 
             # here I run through the number of runs were are to combine specified when you start running this
@@ -268,7 +274,7 @@ for s in "${sub[@]}"; do
                 if [ "$j" == "1" ]; then
                     
                     # here selecting the original named template file
-                    for i in "../../template/second_level_force_FLOB_template.fsf"; do
+                    for i in "../../template/"$templateName; do
                         
                         # now we set some standard paths ands masks 
                         # set path 1 as the first run

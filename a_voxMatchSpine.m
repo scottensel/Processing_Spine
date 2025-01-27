@@ -11,19 +11,19 @@ subName = {'SBSN_H_001','SBSN_H_002','SBSN_H_003','SBSN_H_004','SBSN_H_007','SBS
 zScore = 1.5;
 
 copeFile = 'cope1.feat';
-copeFile = 'cope4.feat';
-copeFile = 'cope7.feat';
+% copeFile = 'cope4.feat';
+% copeFile = 'cope7.feat';
 
 %% THINGS TO ADD
 
 % gunzip('/Volumes/rnelshare/projects/human/brain_spine_stroke_SBSN/Data/sreya/Spine/template/PAM50_levels.nii.gz');
 % [tempLevels, ~] = cbiReadNifti('/Volumes/rnelshare/projects/human/brain_spine_stroke_SBSN/Data/sreya/Spine/template/PAM50_levels.nii');
-% gunzip('D:\SBSN\Data\Spine/template/PAM50_levels.nii.gz');
-% [tempLevels, ~] = cbiReadNifti('D:\SBSN\Data\Spine/template/PAM50_levels.nii');
-% gunzip('D:\SBSN\Data\Spine/template/PAM50_rl.nii.gz');
-% [tempLevels, ~] = cbiReadNifti('D:\SBSN\Data\Spine/template/PAM50_rl.nii');
-gunzip('D:\SBSN\Data\Spine/template/PAM50_dv.nii.gz');
-[tempLevels, ~] = cbiReadNifti('D:\SBSN\Data\Spine/template/PAM50_dv.nii');
+gunzip('D:\SBSN\Data\Spine\template\PAM50_levels.nii.gz');
+[spinalLevels, ~] = cbiReadNifti('D:\SBSN\Data\Spine\template/PAM50_levels.nii');
+gunzip('D:\SBSN\Data\Spine\template\PAM50_rl.nii.gz');
+[lrLevels, ~] = cbiReadNifti('D:\SBSN\Data\Spine/template/PAM50_rl.nii');
+gunzip('D:\SBSN\Data\Spine\template\PAM50_dv.nii.gz');
+[dvLevels, ~] = cbiReadNifti('D:\SBSN\Data\Spine/template/PAM50_dv.nii');
 
 allData = {};
 for i = 1:length(subName)

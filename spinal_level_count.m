@@ -1,4 +1,4 @@
-%% template matching
+ %% template matching
 clear all
 
 %%% SPINE

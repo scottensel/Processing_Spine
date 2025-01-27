@@ -27,10 +27,10 @@ start=`date +%s`
 ####################################
 
 # load in function that has paths to subject
-. /mnt/d/SBSN/Processing_Spine/path_to_subjects.sh 
+. /mnt/d/SMA/Processing_Spine/path_to_subjects.sh 
 
 tput setaf 6; 
-echo -n "Enter the index of the step to perform (1 = Prepare for GLM, 2 = Prepare for force GLM, 3 = Prepare for FLOB force GLM, 4 = Prepare for FLOB smoothed force GLM, 5 = Prepare for iCAP): "
+echo -n "Enter the index of the step to perform (1 = Prepare for GLM, 2 = Prepare for force GLM, 3 = Prepare for FLOB GLM (this one), 4 = Prepare for FLOB smoothed force GLM, 5 = Prepare for iCAP): "
 tput sgr0;
 read ind
 
@@ -42,7 +42,42 @@ for s in "${sub[@]}"; do
 
     for d in "${myFunc[@]}"; do
 
-        if [ "$ind" == "1" ]; then
+        if [ "$ind" == "0" ]; then # this is the one
+
+            tput setaf 2; echo "Prepare second level analysis for GLM " $s"/func/func"$d
+            tput sgr0; 
+
+            cd $DIREC$s"/func/func"$d"/"
+                
+            # do two different if statements for both the cope and var cope to avoid outlier cases of overwriting
+            if [ -f "level_one_FLOB.feat/stats/subjectSpace_zstat1.nii.gz" ]; then
+
+                tput setaf 1; 
+                echo $DIREC$s"/func/func"$d"/level_one_FLOB.feat/stats/zstat1.nii.gz"
+                tput setaf 6;
+                # files have already been transofrmed
+                # subject space images are original images so just apply warps to them
+                # no need to rename files again
+                sct_apply_transfo -i "level_one_FLOB.feat/stats/subjectSpace_zstat1.nii.gz" -d ../../../template/PAM50_t2s.nii.gz -w warp_anat2template.nii.gz -o "level_one_FLOB.feat/stats/zstat1.nii.gz"
+
+            else 
+                echo "No subject space cope"
+
+                # rename file then apply a transform to it so its located in PAM50 space
+                mv "level_one_FLOB.feat/stats/zstat1.nii.gz" "level_one_FLOB.feat/stats/subjectSpace_zstat1.nii.gz"
+
+                tput setaf 1; 
+                echo $DIREC$s"/func/func"$d"/level_one_FLOB.feat/stats/zstat1.nii.gz"
+
+                tput setaf 6;
+                # files have already been transofrmed
+                # subject space images are original images so just apply warps to them
+                # no need to rename files again
+                sct_apply_transfo -i "level_one_FLOB.feat/stats/subjectSpace_zstat1.nii.gz" -d ../../../template/PAM50_t2s.nii.gz -w warp_anat2template.nii.gz -o "level_one_FLOB.feat/stats/zstat1.nii.gz"
+
+            fi
+
+        elif [ "$ind" == "1" ]; then
 
             tput setaf 2; echo "Prepare second level analysis for GLM " $s"/func/func"$d
             tput sgr0; 
@@ -176,7 +211,7 @@ for s in "${sub[@]}"; do
 
             fi
 
-        elif [ "$ind" == "3" ]; then
+        elif [ "$ind" == "3" ]; then # this is the one
 
             tput setaf 2; echo "Prepare second level analysis for GLM " $s"/func/func"$d
             tput sgr0; 
@@ -222,10 +257,10 @@ for s in "${sub[@]}"; do
                     # so I run the command myslef to error check and reapply the transoformation if this fails
                     # it will create a new file if passes and nothing if fails
                     flirt -ref level_one_FLOB.feat/reg/standard -in "level_one_FLOB.feat/stats/cope"$copeNum".nii.gz" -out "level_one_FLOB.feat/reg_standard/stats/cope"$copeNum".nii.gz" -applyxfm -init level_one_FLOB.feat/reg/example_func2standard.mat -interp trilinear -datatype float
-                    
 
 
                 else 
+                    echo "No subject space cope"
 
                     # rename file then apply a transform to it so its located in PAM50 space
                     mv "level_one_FLOB.feat/stats/cope"$copeNum".nii.gz" "level_one_FLOB.feat/stats/subjectSpace_cope"$copeNum".nii.gz"
@@ -272,6 +307,9 @@ for s in "${sub[@]}"; do
                     flirt -ref level_one_FLOB.feat/reg/standard -in "level_one_FLOB.feat/stats/varcope"$copeNum".nii.gz" -out "level_one_FLOB.feat/reg_standard/stats/varcope"$copeNum".nii.gz" -applyxfm -init level_one_FLOB.feat/reg/example_func2standard.mat -interp trilinear -datatype float
 
                 else
+
+                    echo "No subject space varcope"
+
                     mv "level_one_FLOB.feat/stats/varcope"$copeNum".nii.gz" "level_one_FLOB.feat/stats/subjectSpace_varcope"$copeNum".nii.gz"
 
                     tput setaf 1;  

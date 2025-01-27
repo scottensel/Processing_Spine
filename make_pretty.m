@@ -46,15 +46,15 @@ for q = 1:subplot_num % loop through axes
         set(h,'YColor',[0.25 0.25 0.25]); 
 
         % 3: Set MarkerSize
-        for i = 1:length(h.Children)
-            if isprop(h.Children(i),'MarkerSize')
-                if strcmp(h.Children(i).Marker,'.')
-                    h.Children(i).MarkerSize = 15; 
-                else
-                    h.Children(i).MarkerSize = 5; 
-                end
-            end
-        end
+%         for i = 1:length(h.Children)
+%             if isprop(h.Children(i),'MarkerSize')
+%                 if strcmp(h.Children(i).Marker,'.')
+%                     h.Children(i).MarkerSize = 15; 
+%                 else
+%                     h.Children(i).MarkerSize = 5; 
+%                 end
+%             end
+%         end
         % 4: Set LineWidth
         for i = 1:length(h.Children)
             if isprop(h.Children(i),'LineWidth') && h.Children(i).LineWidth==0.5

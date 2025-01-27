@@ -2,9 +2,9 @@ clear all
 
 addpath('D:\NHP_code\cbiNifti')
 
-subject = 'SBSN_H_102';
+subject = 'SMA05_001';
 
-direc_start = 'D:\SBSN\Data\Spine';
+direc_start = 'D:\SMA\MRI_data_upper_limb\Spine';
 direc_end = '\task\';
 load(fullfile(direc_start, subject, direc_end, 'param.mat'))
 

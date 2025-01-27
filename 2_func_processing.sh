@@ -29,7 +29,7 @@ start=`date +%s`
 ####################################
 
 # load in function that has paths to subject
-. /mnt/d/SBSN/Processing_Spine/path_to_subjects.sh 
+. /mnt/d/SMA/Processing_Spine/path_to_subjects.sh 
 
 
 tput setaf 6; 

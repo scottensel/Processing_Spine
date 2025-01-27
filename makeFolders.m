@@ -1,7 +1,6 @@
-subject = 'SBSN_H_104';
+subject = 'SMA05_001';
 
-direc_start = 'D:\SBSN\Data\Spine\';
-
+direc_start = 'D:\SMA\MRI_data_upper_limb\Spine\';
 
 mkdir(fullfile(direc_start, subject, 'anat'))
 mkdir(fullfile(direc_start, subject, 'func'))

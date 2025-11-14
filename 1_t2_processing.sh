@@ -34,6 +34,12 @@ echo -n "Enter the index of the step to perform (1 = Preprocessing, 2 = Spinal L
 tput sgr0;
 read ind
 
+
+tput setaf 6; 
+echo -n "Enter the index of the step to perform (1 = Preprocessing, 2 = Spinal Levels): "
+tput sgr0;
+read ind
+
 # For each subject
 for s in "${sub[@]}"; do
 	cd $DIREC$s"/anat/"

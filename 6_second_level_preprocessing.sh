@@ -27,10 +27,10 @@ start=`date +%s`
 ####################################
 
 # load in function that has paths to subject
-. /mnt/d/SMA/Processing_Spine/path_to_subjects.sh 
+. /mnt/d/SBSN/Processing_Spine/path_to_subjects.sh 
 
 tput setaf 6; 
-echo -n "Enter the index of the step to perform (0 = level 1 zfstat, 1 = Prepare for FLOB GLM (this one), 2 = Prepare for FORCE FLOB GLM (this one), 3 = Prepare for iCAP): "
+echo -n "Enter the index of the step to perform (0 = level 1 zfstat, 1 = Prepare for FLOB GLM (this one), 2 = Prepare for FORCE FLOB GLM (this one), 3 = Prepare for iCAP, 4 = Prepare 3rd level flip): "
 tput sgr0;
 read ind
 
@@ -42,38 +42,74 @@ for s in "${sub[@]}"; do
 
     for d in "${myFunc[@]}"; do
 
+        MAX_JOBS=8
+        job_count=0
+
         if [ "$ind" == "0" ]; then # this is the one
 
-            tput setaf 2; echo "Prepare second level analysis for GLM " $s"/func/func"$d
+            tput setaf 2; echo "Moving files " $s"/func/func"$d
             tput sgr0; 
 
             cd $DIREC$s"/func/func"$d"/"
-                
-            # do two different if statements for both the cope and var cope to avoid outlier cases of overwriting
-            if [ -f "level_one_FLOB.feat/stats/subjectSpace_zstat1.nii.gz" ]; then
+            if [ "$d" == "0" ]; then # this is the one 
 
-                tput setaf 1; 
-                echo $DIREC$s"/func/func"$d"/level_one_FLOB.feat/stats/zstat1.nii.gz"
-                tput setaf 6;
-                # files have already been transofrmed
-                # subject space images are original images so just apply warps to them
-                # no need to rename files again
-                sct_apply_transfo -i "level_one_FLOB.feat/stats/subjectSpace_zstat1.nii.gz" -d ../../../template/PAM50_t2s.nii.gz -w warp_anat2template.nii.gz -o "level_one_FLOB.feat/stats/zstat1.nii.gz"
+                # do two different if statements for both the cope and var cope to avoid outlier cases of overwriting
+                if [ -f "level_one_FLOB.feat/stats/subjectSpace_zstat1.nii.gz" ]; then
+
+                    tput setaf 1; 
+                    echo $DIREC$s"/func/func"$d"/level_one_FLOB.feat/stats/zstat1.nii.gz"
+                    tput setaf 6;
+                    # files have already been transofrmed
+                    # subject space images are original images so just apply warps to them
+                    # no need to rename files again
+                    sct_apply_transfo -i "level_one_FLOB.feat/stats/subjectSpace_zstat1.nii.gz" -d ../../../template/PAM50_t2s.nii.gz -w warp_anat2template.nii.gz -o "level_one_FLOB.feat/stats/zstat1.nii.gz"
+
+                else 
+                    echo "No subject space cope"
+
+                    # rename file then apply a transform to it so its located in PAM50 space
+                    mv "level_one_FLOB.feat/stats/zstat1.nii.gz" "level_one_FLOB.feat/stats/subjectSpace_zstat1.nii.gz"
+
+                    tput setaf 1; 
+                    echo $DIREC$s"/func/func"$d"/level_one_FLOB.feat/stats/zstat1.nii.gz"
+
+                    tput setaf 6;
+                    # files have already been transofrmed
+                    # subject space images are original images so just apply warps to them
+                    # no need to rename files again
+                    sct_apply_transfo -i "level_one_FLOB.feat/stats/subjectSpace_zstat1.nii.gz" -d ../../../template/PAM50_t2s.nii.gz -w warp_anat2template.nii.gz -o "level_one_FLOB.feat/stats/zstat1.nii.gz"
+
+                fi
 
             else 
-                echo "No subject space cope"
 
-                # rename file then apply a transform to it so its located in PAM50 space
-                mv "level_one_FLOB.feat/stats/zstat1.nii.gz" "level_one_FLOB.feat/stats/subjectSpace_zstat1.nii.gz"
+                # do two different if statements for both the cope and var cope to avoid outlier cases of overwriting
+                if [ -f "level_one_force_FLOB.feat/stats/subjectSpace_zfstat1.nii.gz" ]; then
 
-                tput setaf 1; 
-                echo $DIREC$s"/func/func"$d"/level_one_FLOB.feat/stats/zstat1.nii.gz"
+                    tput setaf 1; 
+                    echo $DIREC$s"/func/func"$d"/level_one_force_FLOB.feat/stats/zfstat1.nii.gz"
+                    tput setaf 6;
+                    # files have already been transofrmed
+                    # subject space images are original images so just apply warps to them
+                    # no need to rename files again
+                    sct_apply_transfo -i "level_one_force_FLOB.feat/stats/subjectSpace_zfstat1.nii.gz" -d ../../../template/PAM50_t2s.nii.gz -w warp_anat2template.nii.gz -o "level_one_force_FLOB.feat/stats/zfstat1.nii.gz"
 
-                tput setaf 6;
-                # files have already been transofrmed
-                # subject space images are original images so just apply warps to them
-                # no need to rename files again
-                sct_apply_transfo -i "level_one_FLOB.feat/stats/subjectSpace_zstat1.nii.gz" -d ../../../template/PAM50_t2s.nii.gz -w warp_anat2template.nii.gz -o "level_one_FLOB.feat/stats/zstat1.nii.gz"
+                else 
+                    echo "No subject space cope"
+
+                    # rename file then apply a transform to it so its located in PAM50 space
+                    mv "level_one_force_FLOB.feat/stats/zfstat1.nii.gz" "level_one_force_FLOB.feat/stats/subjectSpace_zfstat1.nii.gz"
+
+                    tput setaf 1; 
+                    echo $DIREC$s"/func/func"$d"/level_one_force_FLOB.feat/stats/zfstat1.nii.gz"
+
+                    tput setaf 6;
+                    # files have already been transofrmed
+                    # subject space images are original images so just apply warps to them
+                    # no need to rename files again
+                    sct_apply_transfo -i "level_one_force_FLOB.feat/stats/subjectSpace_zfstat1.nii.gz" -d ../../../template/PAM50_t2s.nii.gz -w warp_anat2template.nii.gz -o "level_one_force_FLOB.feat/stats/zfstat1.nii.gz"
+
+                fi
 
             fi
 
@@ -239,7 +275,12 @@ for s in "${sub[@]}"; do
 
             totalCopes=(1 2 3 4 5 6 7 8 9)
             for copeNum in "${totalCopes[@]}"; do
-                
+             
+
+                # this is a subshell process to make this run faster in parrallel
+                (
+
+
                 # do two different if statements for both the cope and var cope to avoid outlier cases of overwriting
                 if [ -f "level_one_force_FLOB.feat/stats/subjectSpace_cope"$copeNum".nii.gz" ]; then
 
@@ -335,7 +376,19 @@ for s in "${sub[@]}"; do
 
                 fi
 
+                ) &
+                # this is the end of the subshell
+
+                # this counts the jobs and lets multiple run at the same time
+                ((job_count++))
+                if ((job_count >= MAX_JOBS)); then
+                    wait -n     # Wait for *one* job to finish before starting a new one
+                    ((job_count--))
+                fi
+
             done
+
+            wait
 
             if [ -f level_one_force_FLOB.feat/stats/subjectSpace_mask.nii.gz ]; then
 
@@ -363,7 +416,6 @@ for s in "${sub[@]}"; do
             gunzip PAM50_cervical_cord_all.nii.gz -f
             gunzip PAM50_cervical_cord.nii.gz -f
 
-            # first we are going to split the data along the t dimension
             cd $DIREC$s"/func/func"$d"/iCAP/TA"
 
             # transform to space
@@ -397,6 +449,98 @@ for s in "${sub[@]}"; do
             rm resvol*.nii.gz
             mv fmri_spine_moco_denoised_smooth.nii.gz ../fmri_spine_moco_denoised_smooth.nii.gz
 
+
+        elif [ "$ind" == "4" ]; then
+
+            tput setaf 2; echo "Prepare third level analysis for GLM " $s
+            tput sgr0; 
+
+            cd $DIREC$s"/func/"
+
+            # do two different if statements for both the cope and var cope to avoid outlier cases of overwriting
+            if [ -f "level_two_all_force_FLOB1234.gfeat/cope1.feat/stats/subjectSpace_cope1.nii.gz" ]; then
+
+                tput setaf 1; 
+                echo $DIREC$s"/func/"
+
+                tput setaf 6;
+                # files have already been transofrmed
+                # subject space images are original images so just apply warps to them
+                # no need to rename files again                
+                fslswapdim "level_two_all_force_FLOB1234.gfeat/cope1.feat/stats/subjectSpace_cope1.nii.gz" -x y z "level_two_all_force_FLOB1234.gfeat/cope1.feat/stats/cope1.nii.gz"
+            
+            else 
+                echo "No subject space cope"
+
+                # rename file then apply a transform to it so its located in PAM50 space
+                mv "level_two_all_force_FLOB1234.gfeat/cope1.feat/stats/cope1.nii.gz" "level_two_all_force_FLOB1234.gfeat/cope1.feat/stats/subjectSpace_cope1.nii.gz"
+
+                tput setaf 1; 
+                echo $DIREC$s"/func/"
+
+                tput setaf 6;
+                # files have already been transofrmed
+                fslswapdim "level_two_all_force_FLOB1234.gfeat/cope1.feat/stats/subjectSpace_cope1.nii.gz" -x y z "level_two_all_force_FLOB1234.gfeat/cope1.feat/stats/cope1.nii.gz"
+
+            fi
+
+            # another if statement that does same as above except for varcope file
+            if [ -f "level_two_all_force_FLOB1234.gfeat/cope1.feat/stats/subjectSpace_varcope1.nii.gz" ]; then
+
+                tput setaf 1; 
+                echo $DIREC$s"/func/"
+
+                tput setaf 6;
+                # files have already been transofrmed
+                # subject space images are original images so just apply warps to them
+                # no need to rename files again                
+                fslswapdim "level_two_all_force_FLOB1234.gfeat/cope1.feat/stats/subjectSpace_varcope1.nii.gz" -x y z "level_two_all_force_FLOB1234.gfeat/cope1.feat/stats/varcope1.nii.gz"
+            
+
+            else
+                echo "No subject space varcope"
+
+                # rename file then apply a transform to it so its located in PAM50 space
+                mv "level_two_all_force_FLOB1234.gfeat/cope1.feat/stats/varcope1.nii.gz" "level_two_all_force_FLOB1234.gfeat/cope1.feat/stats/subjectSpace_varcope1.nii.gz"
+
+                tput setaf 1; 
+                echo $DIREC$s"/func/"
+
+                tput setaf 6;
+                # files have already been transofrmed
+                fslswapdim "level_two_all_force_FLOB1234.gfeat/cope1.feat/stats/subjectSpace_varcope1.nii.gz" -x y z "level_two_all_force_FLOB1234.gfeat/cope1.feat/stats/varcope1.nii.gz"
+
+
+            fi
+            
+            # another if statement that does same as above except for varcope file
+            if [ -f "level_two_all_force_FLOB1234.gfeat/cope1.feat/stats/subjectSpace_tdof_t1.nii.gz" ]; then
+
+                tput setaf 1; 
+                echo $DIREC$s"/func/"
+
+                tput setaf 6;
+                # files have already been transofrmed
+                # subject space images are original images so just apply warps to them
+                # no need to rename files again                
+                fslswapdim "level_two_all_force_FLOB1234.gfeat/cope1.feat/stats/subjectSpace_tdof_t1.nii.gz" -x y z "level_two_all_force_FLOB1234.gfeat/cope1.feat/stats/tdof_t1.nii.gz"
+            
+
+            else
+                echo "No subject space tdof_t"
+
+                # rename file then apply a transform to it so its located in PAM50 space
+                mv "level_two_all_force_FLOB1234.gfeat/cope1.feat/stats/tdof_t1.nii.gz" "level_two_all_force_FLOB1234.gfeat/cope1.feat/stats/subjectSpace_tdof_t1.nii.gz"
+
+                tput setaf 1; 
+                echo $DIREC$s"/func/"
+
+                tput setaf 6;
+                # files have already been transofrmed
+                fslswapdim "level_two_all_force_FLOB1234.gfeat/cope1.feat/stats/subjectSpace_tdof_t1.nii.gz" -x y z "level_two_all_force_FLOB1234.gfeat/cope1.feat/stats/tdof_t1.nii.gz"
+
+
+            fi
         fi
         
     done

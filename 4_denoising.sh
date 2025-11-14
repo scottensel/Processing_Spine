@@ -48,15 +48,15 @@ for s in "${sub[@]}"; do
             if [ "$ind" == "1" ]; then
 
                 # Generate EV for outliers
-                #if [ ! -f outliers.png ]; then
+                if [ ! -f outliers.png ]; then
     
-                echo "Generate motion outliers..."
-                tput sgr0
+                    echo "Generate motion outliers..."
+                    tput sgr0
+        
+                    ## generate the EVs (regressors) for moco fmri and create outliers.txt using the spinal cord mask
+                    fsl_motion_outliers -i fmri_spine_moco.nii.gz -o outliers.txt —m fmri_spine_moco_mean_seg_corr.nii.gz -p outliers.png --dvars --nomoco
     
-                ## generate the EVs (regressors) for moco fmri and create outliers.txt using the spinal cord mask
-                fsl_motion_outliers -i fmri_spine_moco.nii.gz -o outliers.txt —m fmri_spine_moco_mean_seg_corr.nii.gz -p outliers.png --dvars --nomoco
-    
-                #fi
+                fi
     
                 tput setaf 2; echo "Prepare nuisance regressors file..."
                 tput sgr0

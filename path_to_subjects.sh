@@ -18,7 +18,7 @@
 ####################################
 # Here edit which paths you want to be able to choose from
 # the folder after this should contain all of the SBSN_X_00X folders
-#myPaths=("/mnt/d/SMA/MRI_data_upper_limb/Spine/" "/mnt/c/Users/scott/Documents/Spine/")
+#myPaths=("/mnt/d/SBSN/Data/Spine/" "/mnt/c/Users/scott/Documents/Spine/")
 ####################################
 
 #echo "Choose a Saved Path:"
@@ -30,14 +30,14 @@
 #echo -n "Path Number: "
 #tput sgr0;
 #read indPath
-
+#
 # setting the variable to correct path
 #DIREC=${myPaths[$indPath]}
-DIREC="/mnt/d/SMA/MRI_data_upper_limb/Spine/"
-
+DIREC="/mnt/d/SBSN/Data/Spine/"
+echo $DIREC
 
 echo "Choose a Subject"
-mySub=("SMA04_" "SMA05_" "SMA06_")
+mySub=("SBSN_H_" "SBSN_S_")
 for i in ${!mySub[@]}; do
   echo "$i -> path ${mySub[$i]}" 
 done
@@ -75,12 +75,15 @@ done
 
 
 echo "Choose Functional Files to run"
-echo "Enter a for all"
+echo "Enter a for all, aa for 1-4"
 tput setaf 6; 
 read -p "Enter Functional Runs to Process: " -a myFunc
 tput sgr0;
 
 if [ "$myFunc" == "a" ]; then
+    myFunc=(1 2 3 4 5 6)
+fi
+if [ "$myFunc" == "aa" ]; then
     myFunc=(1 2 3 4)
 fi
 

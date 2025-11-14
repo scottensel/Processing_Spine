@@ -1,0 +1,1360 @@
+%% template matching
+clear all
+close all
+
+%%% SPINE
+
+% addpath('/Users/pirondinilab/spinalcordtoolbox/cbiNifti');
+addpath('D:\NHP_code\cbiNifti')
+
+% varibales to set up before
+subSplit = 10;
+% subName = {'SBSN_S_001','SBSN_S_002','SBSN_S_003','SBSN_S_004','SBSN_S_005','SBSN_S_006','SBSN_S_044','SBSN_S_055','SBSN_S_066','SBSN_S_077'}; 
+subName = {'SBSN_H_007','SBSN_H_008','SBSN_H_010','SBSN_H_011','SBSN_H_013','SBSN_H_014','SBSN_H_015','SBSN_H_016','SBSN_H_017','SBSN_H_018',...
+    'SBSN_S_001','SBSN_S_002','SBSN_S_003','SBSN_S_004','SBSN_S_005','SBSN_S_006','SBSN_S_007','SBSN_S_044','SBSN_S_008','SBSN_S_009'}; 
+
+zScore = 1.5;
+radius = '2';
+
+copeFile = 'cope11.feat';
+% gunzip('D:\SBSN\Data\Spine\template\PAM50_levels.nii.gz');
+% [spineLevels, ~] = cbiReadNifti('D:\SBSN\Data\Spine\template\PAM50_levels.nii');
+% spineLevels(spineLevels < 4) = 0;
+% spineLevels(spineLevels > 7) = 0;
+% spineLevels(spineLevels > 0) = spineLevels(spineLevels > 0) - 3;
+
+% gunzip('D:\SMA\MRI_data_upper_limb\Spine\template\PAM50_spinal_levels.nii.gz');
+[spineLevels, ~] = cbiReadNifti('F:\SMA_HOLDER\MRI_data_upper_limb\Spine\template\PAM50_spinal_levels.nii');
+spineLevels(spineLevels < 7) = 0;
+spineLevels(spineLevels > 8) = 0;
+spineLevels(spineLevels > 0) = spineLevels(spineLevels > 0) - 6;
+
+
+% gunzip('D:\SBSN\Data\Spine\template\PAM50_rl.nii.gz');
+[lrLevels, ~] = cbiReadNifti('D:\SBSN\Data\Spine\template\PAM50_all_rl.nii');
+% gunzip('D:\SBSN\Data\Spine\template\PAM50_dv.nii.gz');
+[dvLevels, ~] = cbiReadNifti('D:\SBSN\Data\Spine\template\PAM50_all_dv.nii');
+
+% tractNames = { ...
+%     'L-lateral-corticospinal', ...   % 4
+%     'R-lateral-corticospinal', ...   % 5
+%     'L-rubrospinal', ...             % 8
+%     'R-rubrospinal', ...             % 9
+%     'L-ventrolateral-reticulospinal', ... % 16
+%     'R-ventrolateral-reticulospinal', ... % 17
+%     'L-ventral-reticulospinal', ...  % 20
+%     'R-ventral-reticulospinal', ...  % 21
+%     'L-ventral-corticospinal', ...   % 22
+%     'R-ventral-corticospinal', ...   % 23
+%     'L-medial-reticulospinal', ...   % 26
+%     'R-medial-reticulospinal' ...    % 27
+% };
+% spinalTractsNum = [4, 5, 8, 9, 16, 17, 20, 21, 22, 23, 26, 27];
+% spineCombo = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 7, 8];
+spinalTractsNum = [4, 5, 8, 9, 16, 17, 20, 21, 22, 23, 26, 27];
+% spineCombo = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 7, 8];
+spineCombo = [1, 2, 3, 3, 4, 4, 4, 4, 5, 5, 4, 4];
+allTracts = [];
+for i = 1:length(spinalTractsNum)
+
+    [spineTract, ~] = cbiReadNifti(['D:\SBSN\Data\Spine\template\atlas\', 'PAM50_atlas_', sprintf('%02d', spinalTractsNum(i)), '.nii']);
+    
+%     allTracts{i} = spineTract;
+    if length(allTracts) <= spineCombo(i)
+
+        allTracts{spineCombo(i)} = spineTract;
+
+    else
+        allTracts{spineCombo(i)} = allTracts{spineCombo(i)} + spineTract;
+
+    end 
+    
+end
+
+% bAreas = ["L_SM", "R_SM", "L_CEB", "R_CEB"];
+bAreas = ["Right_M1", "Left_M1", "Right_SMA", "Left_SMA", "Right_PMv", "Left_PMv", "L_CEB", "R_CEB"];
+
+for k = 1:length(bAreas)
+
+    analysisFile = 'level_two_PPI_' + bAreas(k) + radius;
+    
+    allData = {};
+    lengthCount = 1;
+    counter = 1;
+    for i = 1:length(subName)
+        %direc = fullfile('/Volumes/MyPassport/Sub_Data/new_data/new_spine', subName{i}, 'func');
+    %     direc = fullfile('/Volumes/rnelshare/projects/human/brain_spine_stroke_SBSN/Data/sreya/Spine', subName{i}, 'func');
+        direc = fullfile('D:\SBSN\Data\Spine', subName{i}, 'func');
+    
+        subjectFolder = dir(direc);
+        
+        if ~exist(fullfile('D:\SBSN\Data\Spine', subName{i}, 'func', [analysisFile + '.gfeat']))
+            
+            continue
+            
+        end
+
+        disp(subName{i})
+    
+        allData{counter, 1} = {};
+        allData{counter, 2} = subName{i};
+    
+        fileCounter = 1;
+        for folder = 3:length(subjectFolder)
+    
+            %is dir and name contains gfeat
+            if subjectFolder(folder).isdir && contains(subjectFolder(folder).name, analysisFile)
+    
+                disp(subjectFolder(folder).name)
+    
+                fileName = strsplit(subjectFolder(folder).name, '.');
+    
+                if ~exist(fullfile(direc, subjectFolder(folder).name, copeFile, 'thresh_zstat1.nii'))
+    
+                    gunzip(fullfile(direc, subjectFolder(folder).name,  copeFile, 'thresh_zstat1.nii.gz'));
+    
+                end
+%                 if ~exist(fullfile(direc, subjectFolder(folder).name, copeFile, 'stats', 'zstat1.nii'))
+%     
+%                     gunzip(fullfile(direc, subjectFolder(folder).name,  copeFile, 'stats', 'zstat1.nii.gz'));
+%     
+%                 end    
+
+                [dataFile, ~] = cbiReadNifti(fullfile(direc, subjectFolder(folder).name,  copeFile, 'thresh_zstat1.nii'));
+%                 [dataFile, ~] = cbiReadNifti(fullfile(direc, subjectFolder(folder).name,  copeFile, 'stats', 'zstat1.nii'));
+
+%                 dataFile(dataFile > 0) = 0;
+                dataFile = abs(dataFile);
+%                 if ismember(i, [1:4 6:length(subName)]) && (subName{1}(6) == 'H')
+%                     dataFile = flip(dataFile, 1);
+% 
+%                 elseif ismember(i, [3 5 9 10]) && (subName{1}(6) == 'S')
+% 
+%                     dataFile = flip(dataFile, 1);
+% 
+%                 end
+
+                % these are the subjects who had lesions on the opposit side
+                if ismember(i, [1:4 6:subSplit subSplit+3 subSplit+5 subSplit+9 subSplit+10])
+                    dataFile = flip(dataFile, 1);
+                end
+    
+                disp(fullfile(direc, subjectFolder(folder).name,  copeFile, 'thresh_zstat1.nii'))
+    
+                numVoxels = sum(sum(sum((dataFile>=zScore).*(spineLevels>=1))));
+                mag = dataFile(spineLevels>=1);
+    
+                numVoxelsSeperate = [];
+                magSeperate = [];
+                for j = 1:max(reshape(spineLevels, [], 1))
+                    numVoxelsSeperate(j) = sum(sum(sum((dataFile>=zScore).*(spineLevels==j))));
+                    numVoxelsSeperate(j) = numVoxelsSeperate(j)/sum(sum(sum(spineLevels==j)))*100;
+                    var = dataFile(spineLevels==j);
+                    magSeperate(j) = mean(var(var>zScore));  
+                end
+    
+                for j = 1:2
+                    numVoxelsLR(j) = sum(sum(sum((dataFile>=zScore).*(lrLevels==j))));
+                    numVoxelsLR(j) = numVoxelsLR(j)/sum(sum(sum(lrLevels==j)))*100;
+    
+                    numVoxelsDV(j) = sum(sum(sum((dataFile>=zScore).*(dvLevels==j))));
+                    numVoxelsDV(j) = numVoxelsDV(j)/sum(sum(sum(dvLevels==j)))*100;
+    
+                    var = dataFile(lrLevels==j);
+                    magSeperateLR(j) = mean(var(var>zScore)); 
+    
+                    var = dataFile(dvLevels==j);
+                    magSeperateDV(j) = mean(var(var>zScore)); 
+                    
+                end
+
+                for j = 1:4
+                    for kk = 1:2
+                        for k2 = 1:2
+                            % L R V D
+                            numVoxelsAllRegion(j, kk, k2) = sum(sum(sum((dataFile>=zScore) .* (spineLevels==j) .* (lrLevels==kk) .* (dvLevels==k2)  )));
+                            numVoxelsAllRegion(j, kk, k2) = numVoxelsAllRegion(j, kk, k2)/sum(sum(sum((spineLevels==j) .* (lrLevels==kk) .* (dvLevels==k2))))*100;
+    
+                        end
+    %                     var = dataFile(spineLevels==j);
+    %                     magSeperate(j) = mean(var(var>zScore));  
+    % 
+    %                     var = dataFile(lrLevels==j);
+    %                     magSeperateLR(k) = mean(var(var>zScore)); 
+    %     
+    %                     var = dataFile(dvLevels==j);
+    %                     magSeperateDV(k) = mean(var(var>zScore)); 
+                    end
+    
+                end
+
+                for j = 1:length(allTracts)
+                    index = (spineLevels>=1).*(allTracts{j} > 0.5);
+    
+    
+                    numVoxelsTracts(j) = sum(sum(sum((dataFile>=zScore).*logical(index))));
+                    numVoxelsTracts(j) = numVoxelsTracts(j) / sum(sum(sum( logical(index) ))) *100;
+                    
+                    
+                    var = dataFile(logical(index));
+                    numVoxelsTractsZ(j) = mean(var(var>zScore)); 
+                end    
+
+                % number of active voxels
+                allData{counter, 1}{fileCounter, 1} = [numVoxels/sum(sum(sum(spineLevels>=1)))*100, mean(mag(mag>zScore)), std(mag(mag>zScore))];
+                allData{counter, 1}{fileCounter, 2} = subjectFolder(folder).name;
+                allData{counter, 1}{fileCounter, 3} = [numVoxelsSeperate; magSeperate];
+    
+    
+                allData{counter, 1}{fileCounter, 4} = [numVoxelsLR; magSeperateLR];         
+                allData{counter, 1}{fileCounter, 5} = [numVoxelsDV; magSeperateDV];
+    
+                allData{counter, 1}{fileCounter, 6} = numVoxelsAllRegion;
+
+                allData{counter, 1}{fileCounter, 7} = numVoxelsTracts;
+                allData{counter, 1}{fileCounter, 8} = numVoxelsTractsZ;    
+                
+                fileCounter = fileCounter + 1;
+            end
+    
+
+        end
+
+        counter = counter +1;
+    end
+    
+    
+    for i = 1:length(allData)
+%             activeVoxels(i, 1) = allData{i,1}{1,1}(1);
+%             zScores(i, 1) = allData{i,1}{1,1}(2);
+    
+            actVoxelsSegH(i, 1:max(reshape(spineLevels, [], 1))) = allData{i, 1}{1, 3}(1,:);
+            zSegH(i, 1:max(reshape(spineLevels, [], 1))) = allData{i, 1}{1, 3}(2,:);
+
+            lrSegH(i,:) = allData{i,1}{1,4}(1,:);
+%             zlrSeg(i,:) = allData{i,1}{1,4}(2,:);
+    
+            dvSegH(i,:) = allData{i,1}{1,5}(1,:);
+            zdvSeg(i,:) = allData{i,1}{1,5}(2,:);
+
+            quadSegH{i} = allData{i,1}{1,6};
+            
+            tractsH(i, :) = allData{i,1}{1,7};
+            tractsZH(i, :) = allData{i,1}{1,8};
+    end
+%     activeVoxelsH = activeVoxels(1:subSplit);
+%     activeVoxelsS = activeVoxels(subSplit+1:end);
+%     zScoresH = zScores(1:subSplit);
+%     zScoresS = zScores(subSplit+1:end);
+
+%     if k == 1
+%         % this is because LM is missing from one healthy participant
+%         actVoxelsSegS = actVoxelsSegH(subSplit:end,:);
+%         zSegS = zSegH(subSplit:end,:);
+%         
+%         actVoxelsSegH(subSplit:end,:) = [];
+%         zSegH(subSplit:end,:) = [];
+%         
+%         % LR
+%         lrSegS = lrSegH(subSplit:end,:);
+% %         zlrSegS = zlrSegH(subSplit:end,:);
+%         
+%         lrSegH(subSplit:end,:) = [];
+% %         zlrSegH(subSplit:end,:) = [];
+%         
+%         % DV
+%         dvSegS = dvSegH(subSplit:end,:);
+% %         zdvSegS = zdvSegH(subSplit:end,:);
+%         
+%         dvSegH(subSplit:end,:) = [];
+% %         zdvSegH(subSplit:end,:) = [];
+%         
+%         % QUAD
+%         quadSegS = quadSegH(1, subSplit:end);
+%         quadSegH = quadSegH(1, 1:subSplit);
+% 
+%         %tracts
+%         tractsS = tractsH(subSplit:end,:);
+%         tractsH(subSplit:end,:) = [];
+%     else
+        actVoxelsSegS = actVoxelsSegH(subSplit+1:end,:);
+        zSegS = zSegH(subSplit+1:end,:);
+        
+        actVoxelsSegH(subSplit+1:end,:) = [];
+        zSegH(subSplit+1:end,:) = [];
+        
+        % LR
+        lrSegS = lrSegH(subSplit+1:end,:);
+%         zlrSegS = zlrSegH(subSplit+1:end,:);
+        
+        lrSegH(subSplit+1:end,:) = [];
+%         zlrSegH(subSplit+1:end,:) = [];
+        
+        % DV
+        dvSegS = dvSegH(subSplit+1:end,:);
+%         zdvSegS = zdvSegH(subSplit+1:end,:);
+        
+        dvSegH(subSplit+1:end,:) = [];
+%         zdvSegH(subSplit+1:end,:) = [];
+        
+        % QUAD
+        quadSegS = quadSegH(1, subSplit+1:end);
+        quadSegH = quadSegH(1, 1:subSplit);
+
+        %tracts
+        tractsS = tractsH(subSplit+1:end,:);
+        tractsH(subSplit+1:end,:) = [];
+%     end
+
+    % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%     figure;
+%     hBar = barh([mean(actVoxelsSegH)', mean(actVoxelsSegS)']);
+%     X=cell2mat(get(hBar,'XData')).'+[hBar.XOffset];
+%     hold on  %4 runs
+%     hEB = errorbar([mean(actVoxelsSegH)', mean(actVoxelsSegS)'], X, [(std(actVoxelsSegH)/sqrt(length(actVoxelsSegH)))',  (std(actVoxelsSegS)/sqrt(length(actVoxelsSegS)))'], 'horizontal','.', 'Color', 'black', 'Marker', 'none');  % add the errorbar
+% %     if k == 1 
+% %         randVec = (-1 + (1+1)*rand(subSplit-1, 1))/10;
+% %     else
+%        randVec = (-1 + (1+1)*rand(subSplit, 1))/10;
+% %     end    
+% %     randVec = (-1 + (1+1)*rand(subSplit, 1))/10;
+%     scatter(actVoxelsSegH, [randVec+X(1,1), randVec+X(2,1), randVec+X(3,1), randVec+X(4,1)], 30, 'k','o','filled'); 
+%     randVec = (-1 + (1+1)*rand(length(subName)-subSplit,1))/10;
+%     scatter(actVoxelsSegS, [randVec+X(1,2), randVec+X(2,2), randVec+X(3,2), randVec+X(4,2)], 30, 'k','o','filled'); 
+%     % scatter(actVoxelsSeg6, [randVec+X(1,2), randVec+X(2,2), randVec+X(3,2), randVec+X(4,2)], 20, 'k','o','filled'); 
+%     set (gca,'YDir','reverse')
+%     yticks(1:length(1:4)); yticklabels({'C5','C6','C7','C8'})
+%     ylabel('Spinal level')
+%     xlabel('Active Voxels');
+%     title(bAreas(k))
+%     make_pretty
+%     
+% %     Save the plot as a PNG image
+%     saveas(gcf, ['D:\SBSN\ppi\', 'POS_', char(bAreas(k)), '_', radius, '_spine_voxel_area_z', num2str(zScore), '.png']);
+%     saveas(gcf, ['D:\SBSN\ppi\', 'POS_', char(bAreas(k)), '_', radius, '_spine_voxel_area_z', num2str(zScore), '.svg']);    
+% %     hold off
+% 
+% 
+%     alphas = [0.05, 0.01, 0.001];
+%     spineNames = {'C5','C6','C7','C8'};
+%     disp('control vs stroke')
+%     for idx = 1:4
+%         [H,P] = ttest2(actVoxelsSegH(:, idx), actVoxelsSegS(:, idx));
+%         spineNames{idx}
+%         H, P
+%         
+%         
+%         [ci95, rejectNull, diffSampMeans] = bootstrapCompMeans(actVoxelsSegH(:, idx), actVoxelsSegS(:, idx), 10000, 0.05, 4);
+%         spineNames{idx}
+%         ci95, rejectNull
+%     
+%     end
+% 
+% 
+%     figure;
+%     hBar = barh([mean(zSegH, 'omitnan')', mean(zSegS, 'omitnan')']);
+%     X=cell2mat(get(hBar,'XData')).'+[hBar.XOffset];
+%     hold on  %4 runs
+%     hEB = errorbar([mean(zSegH, 'omitnan')', mean(zSegS, 'omitnan')'], X, [(std(zSegH, 'omitnan')/sqrt(length(zSegH)))',  (std(zSegS, 'omitnan')/sqrt(length(zSegS)))'], 'horizontal','.', 'Color', 'black', 'Marker', 'none');  % add the errorbar
+% %     if k == 1 
+% %         randVec = (-1 + (1+1)*rand(subSplit-1, 1))/10;
+% %     else
+%        randVec = (-1 + (1+1)*rand(subSplit, 1))/10;
+% %     end    
+% %     randVec = (-1 + (1+1)*rand(subSplit, 1))/10;
+%     scatter(zSegH, [randVec+X(1,1), randVec+X(2,1), randVec+X(3,1), randVec+X(4,1)], 30, 'k','o','filled'); 
+%     randVec = (-1 + (1+1)*rand(length(subName)-subSplit,1))/10;
+%     scatter(zSegS, [randVec+X(1,2), randVec+X(2,2), randVec+X(3,2), randVec+X(4,2)], 30, 'k','o','filled'); 
+%     % scatter(zSeg6, [randVec+X(1,2), randVec+X(2,2), randVec+X(3,2), randVec+X(4,2)], 20, 'k','o','filled'); 
+%     set (gca,'YDir','reverse')
+%     yticks(1:length(1:4)); yticklabels({'C5','C6','C7','C8'})
+%     ylabel('Spinal level')
+%     xlabel('Z score');
+%     title(bAreas(k))
+%     make_pretty
+%     
+% %     Save the plot as a PNG image
+%     saveas(gcf, ['D:\SBSN\ppi\', 'POS_', char(bAreas(k)), '_', radius, '_spine_zscore_area_z', num2str(zScore), '.png']);
+%     saveas(gcf, ['D:\SBSN\ppi\', 'POS_', char(bAreas(k)), '_', radius, '_spine_zscore_area_z', num2str(zScore), '.svg']);  
+
+
+    % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
+    %%%%% 1v 2d  1 l 2 r
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  
+    %%%%% 1v 2d  1 l 2 r
+%     figure;
+%     hBar=bar([mean(lrSegH, 'omitnan'); mean(dvSegH, 'omitnan')]);
+%     X=cell2mat(get(hBar,'XData')).'+[hBar.XOffset];
+%     hold on  %4 runs
+%     hEB = errorbar(X, [mean(lrSegH, 'omitnan'); mean(dvSegH, 'omitnan')], [(std(lrSegH, 'omitnan')/sqrt(length(lrSegH))); (std(dvSegH, 'omitnan')/sqrt(length(dvSegH)))], 'vertical', '.', 'Color', 'black', 'Marker', 'none');  % add the errorbar
+%     if k == 1 
+%         randVec = (-1 + (1+1)*rand(subSplit-1, 1))/10;
+%     else
+%        randVec = (-1 + (1+1)*rand(subSplit, 1))/10;
+%     end    
+% %     randVec = (-1 + (1+1)*rand(subSplit, 1))/10;
+%     scatter([randVec+X(1,1), randVec+X(1,2), randVec+X(2,1), randVec+X(2,2)], [lrSegH, dvSegH],  30, 'k','o','filled'); 
+% 
+%     % scatter([randVec+X(2,1), randVec+X(2,2), randVec+X(2,3), randVec+X(2,4)], [dvSeg, dvSeg6],   20, 'k','o','filled'); 
+%     xticks(1:2); xticklabels({'L R','V D'})
+%     xlabel('Cervical Area')
+%     ylabel('Active Voxels');
+%     title(bAreas(k))
+%     make_pretty
+% 
+% %     Save the plot as a PNG image
+%     saveas(gcf, ['D:\SBSN\ppi\', 'control_', char(bAreas(k)), '_', radius, '_spine_voxel_side_z', num2str(zScore), '.png']);
+%     saveas(gcf, ['D:\SBSN\ppi\', 'control_', char(bAreas(k)), '_', radius, '_spine_voxel_side_z', num2str(zScore), '.svg']);
+% 
+%     figure;
+%     hBar=bar([mean(lrSegS, 'omitnan'); mean(dvSegS, 'omitnan')]);
+%     X=cell2mat(get(hBar,'XData')).'+[hBar.XOffset];
+%     hold on  %4 runs
+%     hEB = errorbar(X, [mean(lrSegS, 'omitnan'); mean(dvSegS, 'omitnan')], [(std(lrSegS, 'omitnan')/sqrt(length(lrSegS))); (std(dvSegS, 'omitnan')/sqrt(length(dvSegS)))], 'vertical', '.', 'Color', 'black', 'Marker', 'none');  % add the errorbar
+%     randVec = (-1 + (1+1)*rand(length(subName)-subSplit, 1))/10;
+%     scatter([randVec+X(1,1), randVec+X(1,2), randVec+X(2,1), randVec+X(2,2)], [lrSegS, dvSegS],  30, 'k','o','filled'); 
+%     % scatter([randVec+X(2,1), randVec+X(2,2), randVec+X(2,3), randVec+X(2,4)], [dvSegS, dvSeg6],   20, 'k','o','filled'); 
+%     xticks(1:2); xticklabels({'L R','V D'})
+%     title(bAreas(k))
+%     xlabel('Cervical Area')
+%     ylabel('Active Voxels');
+%     % title(sprintf('Average Active Voxel 4 vs 6 Runs combined'));
+%     make_pretty
+% 
+%     %     Save the plot as a PNG image
+%     saveas(gcf, ['D:\SBSN\ppi\', 'stroke_', char(bAreas(k)), '_', radius, '_spine_voxel_side_z', num2str(zScore), '.png']);
+%     saveas(gcf, ['D:\SBSN\ppi\', 'stroke_', char(bAreas(k)), '_', radius, '_spine_voxel_side_z', num2str(zScore), '.svg']);
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 
+%     tractNames = { ...
+%     'L-lateral-corticospinal', ...   % 4
+%     'R-lateral-corticospinal', ...   % 5
+%     'L-rubrospinal', ...             % 8
+%     'R-rubrospinal', ...             % 9
+%     'L-ventrolateral-reticulospinal', ... % 16
+%     'R-ventrolateral-reticulospinal', ... % 17
+%     'L-ventral-reticulospinal', ...  % 20
+%     'R-ventral-reticulospinal', ...  % 21
+%     'L-ventral-corticospinal', ...   % 22
+%     'R-ventral-corticospinal', ...   % 23
+%     'L-medial-reticulospinal', ...   % 26
+%     'R-medial-reticulospinal' ...    % 27
+% };
+% spinalTractsNum = [4, 5, 8, 9, 16, 17, 20, 21, 22, 23, 26, 27];
+% spineCombo = [1, 2, 3, 4, 5, 6, 5, 6, 7, 8, 5, 6];
+% spineCombo = [1, 2, 3, 3, 4, 4, 4, 4, 5, 5, 4, 4];
+
+    if k < 7
+%         tractNames = { ...
+%             'L-lateral-corticospinal', ...   % 4
+%             'R-lateral-corticospinal', ...   % 5%     
+%             'L-ventral-corticospinal', ...   % 22
+%             'R-ventral-corticospinal', ...   % 23
+%             'L-ventrolateral-reticulospinal', ... % 16
+%             'R-ventrolateral-reticulospinal', ... % 17
+%             'L-ventral-reticulospinal', ...  % 20
+%             'R-ventral-reticulospinal', ...  % 21
+%             'L-medial-reticulospinal', ...   % 26
+%             'R-medial-reticulospinal' ...    % 27            
+%         };
+% 
+%         tractIndex = [1 2 9 10 6 7 8 9 11 12];
+
+        tractNames = { ...
+            'L-lateral-corticospinal', ...   % 4
+            'R-lateral-corticospinal', ...   % 5%     
+            'L-ventral-corticospinal', ...   % 22
+            'R-ventral-corticospinal', ...   % 23
+            'L Pont reticulospinal', ... % 16
+            'R Pont reticulospinal', ...
+            'L Med reticulospinal', ... % 16
+            'R Med reticulospinal'  
+        };
+%         tractIndex = [1 2 9 10 7 8 5 6];
+
+%       spineCombo = [1, 2, 3, 3, 4, 4, 4, 4, 5, 5, 4, 4];
+        tractNames = { ...
+            'L-lateral-corticospinal', ...   % 4
+            'R-lateral-corticospinal', ...   % 5
+            'reticulospinal', ...
+            'L-ventral-corticospinal', ...   % 22
+        };
+
+        tractIndex = [1 2 4 5];
+
+        figure;
+        hBar = barh([mean(tractsH(:, tractIndex), 'omitnan')', mean(tractsS(:, tractIndex), 'omitnan')']);
+        X=cell2mat(get(hBar,'XData')).'+[hBar.XOffset];
+        hold on  %4 runs
+        hEB = errorbar([mean(tractsH(:, tractIndex), 'omitnan')', mean(tractsS(:, tractIndex), 'omitnan')'], X, [(std(tractsH(:, tractIndex), 'omitnan')/sqrt(length(tractsH(:, tractIndex))))',  (std(tractsS(:, tractIndex), 'omitnan')/sqrt(length(tractsS(:, tractIndex))))'], 'horizontal','.', 'Color', 'black', 'Marker', 'none');  % add the errorbar
+%         if k == 1 
+%             randVec = (-1 + (1+1)*rand(subSplit-1, 1))/10;
+%             Y = randVec + X(1:length(tractNames), 1).';              
+%         else
+           randVec = (-1 + (1+1)*rand(subSplit, 1))/10;
+           Y = randVec + X(1:length(tractNames), 1).';              
+%         end   
+        scatter(tractsH(:, tractIndex), Y, 30, 'k','o','filled'); 
+        randVec = (-1 + (1+1)*rand(length(subName)-subSplit,1))/10;
+        Y2 = randVec + X(1:length(tractNames), 2).';    
+        scatter(tractsS(:, tractIndex), Y2, 30, 'k','o','filled'); 
+        % scatter(actVoxelsSeg6, [randVec+X(1,2), randVec+X(2,2), randVec+X(3,2), randVec+X(4,2)], 20, 'k','o','filled'); 
+        set (gca,'YDir','reverse')
+        yticks(1:length(1:length(tractNames))); yticklabels(tractNames)
+        ylabel('Tract')
+        xlabel('Active Voxels');
+        title(bAreas(k))
+        make_pretty
+
+    else
+%         tractNames = { ...
+%             'L-rubrospinal', ...             % 8
+%             'R-rubrospinal', ...             % 9
+%             'L-ventrolateral-reticulospinal', ... % 16
+%             'R-ventrolateral-reticulospinal', ... % 17
+%             'L-ventral-reticulospinal', ...  % 20
+%             'R-ventral-reticulospinal', ...  % 21
+%             'L-medial-reticulospinal', ...   % 26
+%             'R-medial-reticulospinal' ...    % 27
+%         };
+%         tractNames = { ...
+%             'L-lateral-corticospinal', ...   % 4
+%             'R-lateral-corticospinal', ...   % 5%     
+%             'L-ventral-corticospinal', ...   % 22
+%             'R-ventral-corticospinal', ...   % 23
+%             'L-ventrolateral-reticulospinal', ... % 16
+%             'R-ventrolateral-reticulospinal', ... % 17
+%             'L-ventral-reticulospinal', ...  % 20
+%             'R-ventral-reticulospinal', ...  % 21
+%             'L-medial-reticulospinal', ...   % 26
+%             'R-medial-reticulospinal' ...    % 27            
+%         };
+%         tractIndex = [4 5 6 7 8 9 11 12];
+
+        tractNames = { ...
+            'L-rubrospinal', ...             % 8
+            'R-rubrospinal', ...             % 9
+            'L Pont reticulospinal', ... % 16
+            'R Pont reticulospinal', ...
+            'L Med reticulospinal', ... % 16
+            'R Med reticulospinal'   
+        };
+        % spineCombo = [1, 2, 3, 3, 4, 4, 4, 4, 5, 5, 4, 4];
+        tractNames = { ...
+            'rubrospinal', ...             % 8
+            'reticulospinal', ...
+        };
+
+        tractIndex = [3 4];
+        figure;
+        hBar = barh([mean(tractsH(:, tractIndex), 'omitnan')', mean(tractsS(:, tractIndex), 'omitnan')']);
+        X=cell2mat(get(hBar,'XData')).'+[hBar.XOffset];
+        hold on  %4 runs
+        hEB = errorbar([mean(tractsH(:, tractIndex), 'omitnan')', mean(tractsS(:, tractIndex), 'omitnan')'], X, [(std(tractsH(:, tractIndex), 'omitnan')/sqrt(length(tractsH(:, tractIndex))))',  (std(tractsS(:, tractIndex), 'omitnan')/sqrt(length(tractsS(:, tractIndex))))'], 'horizontal','.', 'Color', 'black', 'Marker', 'none');  % add the errorbar
+%         if k == 1 
+%             randVec = (-1 + (1+1)*rand(subSplit-1, 1))/10;
+%             Y = randVec + X(1:length(tractNames), 1).';              
+%         else
+           randVec = (-1 + (1+1)*rand(subSplit, 1))/10;
+            Y = randVec + X(1:length(tractNames), 1).';              
+%         end   
+        scatter(tractsH(:, tractIndex), Y, 30, 'k','o','filled'); 
+%         scatter(tractsH(:, tractIndex), [randVec+X(1,1), randVec+X(2,1), randVec+X(3,1), randVec+X(4,1)], 30, 'k','o','filled'); 
+        randVec = (-1 + (1+1)*rand(length(subName)-subSplit,1))/10;
+        Y2 = randVec + X(1:length(tractNames), 2).'; 
+        scatter(tractsS(:, tractIndex), Y2, 30, 'k','o','filled'); 
+%         scatter(tractsS(:, tractIndex), [randVec+X(1,2), randVec+X(2,2), randVec+X(3,2), randVec+X(4,2)], 30, 'k','o','filled'); 
+        % scatter(actVoxelsSeg6, [randVec+X(1,2), randVec+X(2,2), randVec+X(3,2), randVec+X(4,2)], 20, 'k','o','filled'); 
+        set (gca,'YDir','reverse')
+        yticks(1:length(1:length(tractNames))); yticklabels(tractNames)
+        ylabel('Tract')
+        xlabel('Active Voxels');
+        title(bAreas(k))
+        make_pretty
+
+    end
+
+
+% %     Save the plot as a PNG image
+    saveas(gcf, ['D:\SBSN\ppi\', 'POS_tracts_', char(bAreas(k)), '_', radius, '_spine_voxel_side_z', num2str(zScore), '.png']);
+    saveas(gcf, ['D:\SBSN\ppi\', 'POS_tracts_', char(bAreas(k)), '_', radius, '_spine_voxel_side_z', num2str(zScore), '.svg']);
+
+
+    disp('control vs stroke')
+    for idx = 1:length(tractIndex)
+        [H,P] = ranksum(tractsH(:, tractIndex(idx)), tractsS(:, tractIndex(idx)));
+        tractNames{idx}
+        H, P
+        
+        
+        [ci95, rejectNull, diffSampMeans] = bootstrapCompMeans(tractsH(:, tractIndex(idx)), tractsS(:, tractIndex(idx)), 10000, 0.05, length(tractIndex));
+        tractNames{idx}
+        ci95, rejectNull
+    
+    end
+
+
+
+%     figure;
+%     hBar=bar([mean(zlrSeg, 'omitnan'); mean(zdvSeg, 'omitnan')]);
+%     X=cell2mat(get(hBar,'XData')).'+[hBar.XOffset];
+%     hold on  %4 runs
+%     hEB = errorbar(X, [mean(zlrSeg, 'omitnan'); mean(zdvSeg, 'omitnan')], [(std(zlrSeg, 'omitnan')/sqrt(length(zlrSeg))); (std(zdvSeg, 'omitnan')/sqrt(length(zdvSeg)))], 'vertical', '.', 'Color', 'black', 'Marker', 'none');  % add the errorbar
+%     randVec = (-1 + (1+1)*rand(length(subName), 1))/10;
+%     scatter([randVec+X(1,1), randVec+X(1,2), randVec+X(2,1), randVec+X(2,2)], [zlrSeg, zdvSeg],  30, 'k','o','filled'); 
+%     % scatter([randVec+X(2,1), randVec+X(2,2), randVec+X(2,3), randVec+X(2,4)], [zdvSeg, zdvSeg6],   20, 'k','o','filled'); 
+%     xticks(1:length(1:2)); xticklabels({'L R','V D'})
+%     xlabel('Cervical Area')
+%     ylabel('Z-score');
+%     title(bAreas(k))
+%     make_pretty
+    
+
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%     % Quad names and mapping to subplot positions
+%     quadNames = {'Left Ventral', 'Left Dorsal'; 'Right Ventral', 'Right Dorsal'};
+%     subplotPos = [1, 3; 2, 4];  % top-left=1, bottom-left=2, top-right=3, bottom-right=4
+%     
+%     N_H = numel(quadSegH);
+%     N_S = numel(quadSegS);
+%     [L, R, C] = size(quadSegH{1});   % Expect 4x2x2
+%     spinalLevels = {'C5','C6','C7','C8'};
+%     
+%     figure;
+%     for r = 1:R
+%         for c = 1:C
+%             % Extract values for this quadrant
+%             Hvals = zeros(N_H, L);
+%             for p = 1:N_H
+%                 A = quadSegH{p};
+%                 Hvals(p, :) = A(:, r, c).';
+%             end
+%             Svals = zeros(N_S, L);
+%             for p = 1:N_S
+%                 A = quadSegS{p};
+%                 Svals(p, :) = A(:, r, c).';
+%             end
+%     
+%             % Means and SEMs
+%             meanH = mean(Hvals, 1)';                   
+%             meanS = mean(Svals, 1)';                   
+%             semH  = std(Hvals,0,1)'/sqrt(N_H);      
+%             semS  = std(Svals,0,1)'/sqrt(N_S);      
+%     
+%             % Subplot in correct position
+%             subplot(2, 2, subplotPos(r, c));
+%             hold on;
+%     
+%             % Grouped horizontal bars
+%             hBar = barh([meanH, meanS]);
+%     %         if numel(hBar) >= 2
+%     %             hBar(1).FaceColor = [0.75 0.75 0.95]; % H group
+%     %             hBar(2).FaceColor = [0.95 0.75 0.75]; % S group
+%     %         end
+%     
+%             xHc = hBar(1).XEndPoints;  % centers for H bars
+%             xSc = hBar(2).XEndPoints;  % centers for S bars
+%     
+%             X = [xHc; xSc]';
+%             % Errorbars
+%             errorbar([meanH, meanS], X, [semH, semS], 'horizontal', '.', ...
+%                      'Color', 'k', 'Marker', 'none', 'LineWidth', 1);
+%             
+%             % Scatter points with jitter
+%             randVecH = (-1 + 2*rand(N_H, 1))/10;
+%             yH = [randVecH + X(1,1); randVecH + X(2,1); randVecH + X(3,1); randVecH + X(4,1)];
+%             scatter(Hvals(:), yH, 30, 'k', 'o', 'filled');
+%     
+%             randVecS = (-1 + 2*rand(N_S, 1))/10;
+%             yS = [randVecS + X(1,2); randVecS + X(2,2); randVecS + X(3,2); randVecS + X(4,2)];
+%             scatter(Svals(:), yS, 30, 'k', 'o', 'filled');
+%     
+%             % Axes, labels, title
+%             set(gca, 'YDir', 'reverse');
+%             yticks(1:L); yticklabels(spinalLevels);
+%             xlim([0 100])
+%             ylabel('Spinal Level'); xlabel('Active Voxels');
+%             title(quadNames{r,c});
+%             grid on; box off;
+%             hold off;
+%     
+%         end
+%     end
+%     make_pretty
+%     sgtitle(['Average Active Voxels by Level and Quadrant (H vs S) with Individual Subjects', char(bAreas(k)), ' ', radius] );
+
+end
+% close all
+
+%%
+
+return
+
+for k = 1:4
+
+    analysisFile = 'level_two_PPI_' + bAreas(k) + radius;
+    
+    allData = {};
+    lengthCount = 1;
+    counter = 1;
+    for i = 1:length(subName)
+        %direc = fullfile('/Volumes/MyPassport/Sub_Data/new_data/new_spine', subName{i}, 'func');
+    %     direc = fullfile('/Volumes/rnelshare/projects/human/brain_spine_stroke_SBSN/Data/sreya/Spine', subName{i}, 'func');
+        direc = fullfile('D:\SBSN\Data\Spine', subName{i}, 'func');
+    
+        subjectFolder = dir(direc);
+        
+        if ~exist(fullfile('D:\SBSN\Data\Spine', subName{i}, 'func', [analysisFile + '.gfeat']))
+            
+            continue
+            
+        end
+
+        disp(subName{i})
+    
+        allData{counter, 1} = {};
+        allData{counter, 2} = subName{i};
+    
+        fileCounter = 1;
+        for folder = 3:length(subjectFolder)
+    
+            %is dir and name contains gfeat
+            if subjectFolder(folder).isdir && contains(subjectFolder(folder).name, analysisFile)
+    
+                disp(subjectFolder(folder).name)
+    
+                fileName = strsplit(subjectFolder(folder).name, '.');
+    
+%                 if ~exist(fullfile(direc, subjectFolder(folder).name, copeFile, 'thresh_zstat1.nii'))
+%     
+%                     gunzip(fullfile(direc, subjectFolder(folder).name,  copeFile, 'thresh_zstat1.nii.gz'));
+%     
+%                 end
+                if ~exist(fullfile(direc, subjectFolder(folder).name, copeFile, 'stats', 'zstat1.nii'))
+    
+                    gunzip(fullfile(direc, subjectFolder(folder).name,  copeFile, 'stats', 'zstat1.nii.gz'));
+    
+                end    
+
+%                 [dataFile, ~] = cbiReadNifti(fullfile(direc, subjectFolder(folder).name,  copeFile, 'thresh_zstat1.nii'));
+                [dataFile, ~] = cbiReadNifti(fullfile(direc, subjectFolder(folder).name,  copeFile, 'stats', 'zstat1.nii'));
+
+                dataFile(dataFile > 0) = 0;
+                dataFile = abs(dataFile);
+%                 if ismember(i, [1:4 6:length(subName)]) && (subName{1}(6) == 'H')
+%                     dataFile = flip(dataFile, 1);
+% 
+%                 elseif ismember(i, [3 5 9 10]) && (subName{1}(6) == 'S')
+% 
+%                     dataFile = flip(dataFile, 1);
+% 
+%                 end
+
+                % these are the subjects who had lesions on the opposit side
+                if ismember(i, [1:4 6:subSplit subSplit+3 subSplit+5 subSplit+9 subSplit+10])
+                    dataFile = flip(dataFile, 1);
+                end
+    
+                disp(fullfile(direc, subjectFolder(folder).name,  copeFile, 'thresh_zstat1.nii'))
+    
+                numVoxels = sum(sum(sum((dataFile>=zScore).*(spineLevels>=1))));
+                mag = dataFile(spineLevels>=1);
+    
+                numVoxelsSeperate = [];
+                magSeperate = [];
+                for j = 1:max(reshape(spineLevels, [], 1))
+                    numVoxelsSeperate(j) = sum(sum(sum((dataFile>=zScore).*(spineLevels==j))));
+                    numVoxelsSeperate(j) = numVoxelsSeperate(j)/sum(sum(sum(spineLevels==j)))*100;
+                    var = dataFile(spineLevels==j);
+                    magSeperate(j) = mean(var(var>zScore));  
+                end
+    
+                for j = 1:2
+                    numVoxelsLR(j) = sum(sum(sum((dataFile>=zScore).*(lrLevels==j))));
+                    numVoxelsLR(j) = numVoxelsLR(j)/sum(sum(sum(lrLevels==j)))*100;
+    
+                    numVoxelsDV(j) = sum(sum(sum((dataFile>=zScore).*(dvLevels==j))));
+                    numVoxelsDV(j) = numVoxelsDV(j)/sum(sum(sum(dvLevels==j)))*100;
+    
+                    var = dataFile(lrLevels==j);
+                    magSeperateLR(j) = mean(var(var>zScore)); 
+    
+                    var = dataFile(dvLevels==j);
+                    magSeperateDV(j) = mean(var(var>zScore)); 
+                    
+                end
+
+                for j = 1:4
+                    for kk = 1:2
+                        for k2 = 1:2
+                            % L R V D
+                            numVoxelsAllRegion(j, kk, k2) = sum(sum(sum((dataFile>=zScore) .* (spineLevels==j) .* (lrLevels==kk) .* (dvLevels==k2)  )));
+                            numVoxelsAllRegion(j, kk, k2) = numVoxelsAllRegion(j, kk, k2)/sum(sum(sum((spineLevels==j) .* (lrLevels==kk) .* (dvLevels==k2))))*100;
+    
+                        end
+    %                     var = dataFile(spineLevels==j);
+    %                     magSeperate(j) = mean(var(var>zScore));  
+    % 
+    %                     var = dataFile(lrLevels==j);
+    %                     magSeperateLR(k) = mean(var(var>zScore)); 
+    %     
+    %                     var = dataFile(dvLevels==j);
+    %                     magSeperateDV(k) = mean(var(var>zScore)); 
+                    end
+    
+                end
+
+                for j = 1:length(allTracts)
+                    index = (spineLevels>=1).*(allTracts{j} > 0.5);
+    
+    
+                    numVoxelsTracts(j) = sum(sum(sum((dataFile>=zScore).*logical(index))));
+                    numVoxelsTracts(j) = numVoxelsTracts(j) / sum(sum(sum( logical(index) ))) *100;
+                    
+                    
+                    var = dataFile(logical(index));
+                    numVoxelsTractsZ(j) = mean(var(var>zScore)); 
+                end    
+
+                % number of active voxels
+                allData{counter, 1}{fileCounter, 1} = [numVoxels/sum(sum(sum(spineLevels>=1)))*100, mean(mag(mag>zScore)), std(mag(mag>zScore))];
+                allData{counter, 1}{fileCounter, 2} = subjectFolder(folder).name;
+                allData{counter, 1}{fileCounter, 3} = [numVoxelsSeperate; magSeperate];
+    
+    
+                allData{counter, 1}{fileCounter, 4} = [numVoxelsLR; magSeperateLR];         
+                allData{counter, 1}{fileCounter, 5} = [numVoxelsDV; magSeperateDV];
+    
+                allData{counter, 1}{fileCounter, 6} = numVoxelsAllRegion;
+
+                allData{counter, 1}{fileCounter, 7} = numVoxelsTracts;
+                allData{counter, 1}{fileCounter, 8} = numVoxelsTractsZ;    
+                
+                fileCounter = fileCounter + 1;
+            end
+    
+
+        end
+
+        counter = counter +1;
+    end
+    
+    
+    for i = 1:length(allData)
+%             activeVoxels(i, 1) = allData{i,1}{1,1}(1);
+%             zScores(i, 1) = allData{i,1}{1,1}(2);
+    
+            actVoxelsSegH(i, 1:max(reshape(spineLevels, [], 1))) = allData{i, 1}{1, 3}(1,:);
+            zSegH(i, 1:max(reshape(spineLevels, [], 1))) = allData{i, 1}{1, 3}(2,:);
+
+            lrSegH(i,:) = allData{i,1}{1,4}(1,:);
+%             zlrSeg(i,:) = allData{i,1}{1,4}(2,:);
+    
+            dvSegH(i,:) = allData{i,1}{1,5}(1,:);
+            zdvSeg(i,:) = allData{i,1}{1,5}(2,:);
+
+            quadSegH{i} = allData{i,1}{1,6};
+            
+            tractsH(i, :) = allData{i,1}{1,7};
+            tractsZH(i, :) = allData{i,1}{1,8};
+    end
+%     activeVoxelsH = activeVoxels(1:subSplit);
+%     activeVoxelsS = activeVoxels(subSplit+1:end);
+%     zScoresH = zScores(1:subSplit);
+%     zScoresS = zScores(subSplit+1:end);
+    if k == 1
+        % this is because LM is missing from one healthy participant
+        actVoxelsSegS = actVoxelsSegH(subSplit:end,:);
+        zSegS = zSegH(subSplit:end,:);
+        
+        actVoxelsSegH(subSplit:end,:) = [];
+        zSegH(subSplit:end,:) = [];
+        
+        % LR
+        lrSegS = lrSegH(subSplit:end,:);
+%         zlrSegS = zlrSegH(subSplit:end,:);
+        
+        lrSegH(subSplit:end,:) = [];
+%         zlrSegH(subSplit:end,:) = [];
+        
+        % DV
+        dvSegS = dvSegH(subSplit:end,:);
+%         zdvSegS = zdvSegH(subSplit:end,:);
+        
+        dvSegH(subSplit:end,:) = [];
+%         zdvSegH(subSplit:end,:) = [];
+        
+        % QUAD
+        quadSegS = quadSegH(1, subSplit:end);
+        quadSegH = quadSegH(1, 1:subSplit);
+
+        %tracts
+        tractsS = tractsH(subSplit:end,:);
+        tractsH(subSplit:end,:) = [];
+    else
+        actVoxelsSegS = actVoxelsSegH(subSplit+1:end,:);
+        zSegS = zSegH(subSplit+1:end,:);
+        
+        actVoxelsSegH(subSplit+1:end,:) = [];
+        zSegH(subSplit+1:end,:) = [];
+        
+        % LR
+        lrSegS = lrSegH(subSplit+1:end,:);
+%         zlrSegS = zlrSegH(subSplit+1:end,:);
+        
+        lrSegH(subSplit+1:end,:) = [];
+%         zlrSegH(subSplit+1:end,:) = [];
+        
+        % DV
+        dvSegS = dvSegH(subSplit+1:end,:);
+%         zdvSegS = zdvSegH(subSplit+1:end,:);
+        
+        dvSegH(subSplit+1:end,:) = [];
+%         zdvSegH(subSplit+1:end,:) = [];
+        
+        % QUAD
+        quadSegS = quadSegH(1, subSplit+1:end);
+        quadSegH = quadSegH(1, 1:subSplit);
+
+        %tracts
+        tractsS = tractsH(subSplit+1:end,:);
+        tractsH(subSplit+1:end,:) = [];
+    end
+%     figure;
+%     plot(activeVoxels);
+%     make_pretty
+%     xlim([0.75,7.25])
+%     xlabel('Run Combination')
+%     ylabel('Active Voxels');
+%     title(bAreas(k))
+% 
+%     
+%     
+% %     
+%    
+%     figure;
+%     plot(zScores);
+%     make_pretty
+%     xlim([0.75,5.25])
+%     xlabel('Run Combination')
+%     ylabel('Z-Score');
+%     title(bAreas(k))
+
+
+    % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
+%     figure;
+%     hBar=barh(mean(actVoxSegH)');
+%     X=get(hBar,'XData').'+[hBar.XOffset];
+%     hold on  %4 runs
+%     hEB = errorbar(mean(actVoxSegH)', X, (std(actVoxSegH)/sqrt(length(actVoxSegH)))', 'horizontal', '.', 'Color', 'black', 'Marker', 'none');  % add the errorbar
+%     % randVec = (-1 + (1+1)*rand(7,1))/10;
+%     % scatter(actVoxSeg, [randVec+X(1,1), randVec+X(2,1), randVec+X(3,1), randVec+X(4,1)], 30, 'k','o','filled'); 
+%     % scatter(actVoxSeg, [randVec+X(1,2), randVec+X(2,2), randVec+X(3,2), randVec+X(4,2)], 30, 'k','o','filled');
+%     if k == 1 && (subName{1}(6) == 'H')
+%         randVec = (-1 + (1+1)*rand(length(subName)-1, 1))/10;
+%     else
+%        randVec = (-1 + (1+1)*rand(length(subName), 1))/10;
+%     end
+%     scatter(actVoxSegH, [randVec+X(1,1), randVec+X(2,1), randVec+X(3,1), randVec+X(4,1)], 30, 'k','o','filled'); 
+% %     scatter(actVoxSeg, [randVec+X(1,1), randVec+X(2,1), randVec+X(3,1), randVec+X(4,1), randVec+X(5,1), randVec+X(6,1), randVec+X(7,1), randVec+X(8,1)], 30, 'k','o','filled'); 
+%     set (gca,'YDir','reverse')
+%     yticks(1:length(1:4)); yticklabels({'C5','C6','C7','C8'})
+% %     yticks(1:length(1:8)); yticklabels({'C1','C2','C3','C4','C5','C6','C7','C8'})
+% 
+%     subplot(2, 2, k);
+%     hold on;
+    figure;
+    hBar = barh([mean(actVoxelsSegH)', mean(actVoxelsSegS)']);
+    X=cell2mat(get(hBar,'XData')).'+[hBar.XOffset];
+    hold on  %4 runs
+    hEB = errorbar([mean(actVoxelsSegH)', mean(actVoxelsSegS)'], X, [(std(actVoxelsSegH)/sqrt(length(actVoxelsSegH)))',  (std(actVoxelsSegS)/sqrt(length(actVoxelsSegS)))'], 'horizontal','.', 'Color', 'black', 'Marker', 'none');  % add the errorbar
+    if k == 1 
+        randVec = (-1 + (1+1)*rand(subSplit-1, 1))/10;
+    else
+       randVec = (-1 + (1+1)*rand(subSplit, 1))/10;
+    end    
+%     randVec = (-1 + (1+1)*rand(subSplit, 1))/10;
+    scatter(actVoxelsSegH, [randVec+X(1,1), randVec+X(2,1), randVec+X(3,1), randVec+X(4,1)], 30, 'k','o','filled'); 
+    randVec = (-1 + (1+1)*rand(length(subName)-subSplit,1))/10;
+    scatter(actVoxelsSegS, [randVec+X(1,2), randVec+X(2,2), randVec+X(3,2), randVec+X(4,2)], 30, 'k','o','filled'); 
+    % scatter(actVoxelsSeg6, [randVec+X(1,2), randVec+X(2,2), randVec+X(3,2), randVec+X(4,2)], 20, 'k','o','filled'); 
+    set (gca,'YDir','reverse')
+    yticks(1:length(1:4)); yticklabels({'C5','C6','C7','C8'})
+    ylabel('Spinal level')
+    xlabel('Active Voxels');
+    title(bAreas(k))
+    make_pretty
+    
+% %     Save the plot as a PNG image
+%     saveas(gcf, ['D:\SBSN\ppi\', subName{1}(6), '_', char(bAreas(k)), '_', radius, '_spine_voxel_area_z', num2str(zScore), '.png']);
+%     saveas(gcf, ['D:\SBSN\ppi\', subName{1}(6), '_', char(bAreas(k)), '_', radius, '_spine_voxel_area_z', num2str(zScore), '.svg']);
+%     Save the plot as a PNG image
+    saveas(gcf, ['D:\SBSN\ppi\', 'NEG_', char(bAreas(k)), '_', radius, '_spine_voxel_area_z', num2str(zScore), '.png']);
+    saveas(gcf, ['D:\SBSN\ppi\', 'NEG_', char(bAreas(k)), '_', radius, '_spine_voxel_area_z', num2str(zScore), '.svg']);    
+%     hold off
+
+
+    alphas = [0.05, 0.01, 0.001];
+    spineNames = {'C5','C6','C7','C8'};
+    disp('control vs stroke')
+    for idx = 1:4
+        [H,P] = ttest2(actVoxelsSegH(:, idx), actVoxelsSegS(:, idx));
+        spineNames{idx}
+        H, P
+        
+        
+        [ci95, rejectNull, diffSampMeans] = bootstrapCompMeans(actVoxelsSegH(:, idx), actVoxelsSegS(:, idx), 10000, 0.05, 4);
+        spineNames{idx}
+        ci95, rejectNull
+    
+    end
+
+
+    figure;
+    hBar = barh([mean(zSegH, 'omitnan')', mean(zSegS, 'omitnan')']);
+    X=cell2mat(get(hBar,'XData')).'+[hBar.XOffset];
+    hold on  %4 runs
+    hEB = errorbar([mean(zSegH, 'omitnan')', mean(zSegS, 'omitnan')'], X, [(std(zSegH, 'omitnan')/sqrt(length(zSegH)))',  (std(zSegS, 'omitnan')/sqrt(length(zSegS)))'], 'horizontal','.', 'Color', 'black', 'Marker', 'none');  % add the errorbar
+    if k == 1 
+        randVec = (-1 + (1+1)*rand(subSplit-1, 1))/10;
+    else
+       randVec = (-1 + (1+1)*rand(subSplit, 1))/10;
+    end    
+%     randVec = (-1 + (1+1)*rand(subSplit, 1))/10;
+    scatter(zSegH, [randVec+X(1,1), randVec+X(2,1), randVec+X(3,1), randVec+X(4,1)], 30, 'k','o','filled'); 
+    randVec = (-1 + (1+1)*rand(length(subName)-subSplit,1))/10;
+    scatter(zSegS, [randVec+X(1,2), randVec+X(2,2), randVec+X(3,2), randVec+X(4,2)], 30, 'k','o','filled'); 
+    % scatter(zSeg6, [randVec+X(1,2), randVec+X(2,2), randVec+X(3,2), randVec+X(4,2)], 20, 'k','o','filled'); 
+    set (gca,'YDir','reverse')
+    yticks(1:length(1:4)); yticklabels({'C5','C6','C7','C8'})
+    ylabel('Spinal level')
+    xlabel('Z score');
+    title(bAreas(k))
+    make_pretty
+    
+%     
+%     Save the plot as a PNG image
+%     saveas(gcf, ['D:\SBSN\Manuscript\plots\Spine_zscore_area_z', num2str(zScore), '.png']);
+%     saveas(gcf, ['D:\SBSN\Manuscript\plots\Spine_zscore_area_z', num2str(zScore), '.svg']);
+%     Save the plot as a PNG image
+    saveas(gcf, ['D:\SBSN\ppi\', 'NEG_', char(bAreas(k)), '_', radius, '_spine_zscore_area_z', num2str(zScore), '.png']);
+    saveas(gcf, ['D:\SBSN\ppi\', 'NEG_', char(bAreas(k)), '_', radius, '_spine_zscore_area_z', num2str(zScore), '.svg']);  
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
+    %%%%% 1v 2d  1 l 2 r
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  
+    %%%%% 1v 2d  1 l 2 r
+%     figure;
+%     hBar=bar([mean(lrSegH, 'omitnan'); mean(dvSegH, 'omitnan')]);
+%     X=cell2mat(get(hBar,'XData')).'+[hBar.XOffset];
+%     hold on  %4 runs
+%     hEB = errorbar(X, [mean(lrSegH, 'omitnan'); mean(dvSegH, 'omitnan')], [(std(lrSegH, 'omitnan')/sqrt(length(lrSegH))); (std(dvSegH, 'omitnan')/sqrt(length(dvSegH)))], 'vertical', '.', 'Color', 'black', 'Marker', 'none');  % add the errorbar
+%     if k == 1 
+%         randVec = (-1 + (1+1)*rand(subSplit-1, 1))/10;
+%     else
+%        randVec = (-1 + (1+1)*rand(subSplit, 1))/10;
+%     end    
+% %     randVec = (-1 + (1+1)*rand(subSplit, 1))/10;
+%     scatter([randVec+X(1,1), randVec+X(1,2), randVec+X(2,1), randVec+X(2,2)], [lrSegH, dvSegH],  30, 'k','o','filled'); 
+% 
+%     % scatter([randVec+X(2,1), randVec+X(2,2), randVec+X(2,3), randVec+X(2,4)], [dvSeg, dvSeg6],   20, 'k','o','filled'); 
+%     xticks(1:2); xticklabels({'L R','V D'})
+%     xlabel('Cervical Area')
+%     ylabel('Active Voxels');
+%     title(bAreas(k))
+%     make_pretty
+% 
+% %     Save the plot as a PNG image
+%     saveas(gcf, ['D:\SBSN\ppi\', 'control_', char(bAreas(k)), '_', radius, '_spine_voxel_side_z', num2str(zScore), '.png']);
+%     saveas(gcf, ['D:\SBSN\ppi\', 'control_', char(bAreas(k)), '_', radius, '_spine_voxel_side_z', num2str(zScore), '.svg']);
+% 
+%     figure;
+%     hBar=bar([mean(lrSegS, 'omitnan'); mean(dvSegS, 'omitnan')]);
+%     X=cell2mat(get(hBar,'XData')).'+[hBar.XOffset];
+%     hold on  %4 runs
+%     hEB = errorbar(X, [mean(lrSegS, 'omitnan'); mean(dvSegS, 'omitnan')], [(std(lrSegS, 'omitnan')/sqrt(length(lrSegS))); (std(dvSegS, 'omitnan')/sqrt(length(dvSegS)))], 'vertical', '.', 'Color', 'black', 'Marker', 'none');  % add the errorbar
+%     randVec = (-1 + (1+1)*rand(length(subName)-subSplit, 1))/10;
+%     scatter([randVec+X(1,1), randVec+X(1,2), randVec+X(2,1), randVec+X(2,2)], [lrSegS, dvSegS],  30, 'k','o','filled'); 
+%     % scatter([randVec+X(2,1), randVec+X(2,2), randVec+X(2,3), randVec+X(2,4)], [dvSegS, dvSeg6],   20, 'k','o','filled'); 
+%     xticks(1:2); xticklabels({'L R','V D'})
+%     title(bAreas(k))
+%     xlabel('Cervical Area')
+%     ylabel('Active Voxels');
+%     % title(sprintf('Average Active Voxel 4 vs 6 Runs combined'));
+%     make_pretty
+% 
+%     %     Save the plot as a PNG image
+%     saveas(gcf, ['D:\SBSN\ppi\', 'stroke_', char(bAreas(k)), '_', radius, '_spine_voxel_side_z', num2str(zScore), '.png']);
+%     saveas(gcf, ['D:\SBSN\ppi\', 'stroke_', char(bAreas(k)), '_', radius, '_spine_voxel_side_z', num2str(zScore), '.svg']);
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 
+%     tractNames = { ...
+%     'L-lateral-corticospinal', ...   % 4
+%     'R-lateral-corticospinal', ...   % 5
+%     'L-rubrospinal', ...             % 8
+%     'R-rubrospinal', ...             % 9
+%     'L-ventrolateral-reticulospinal', ... % 16
+%     'R-ventrolateral-reticulospinal', ... % 17
+%     'L-ventral-reticulospinal', ...  % 20
+%     'R-ventral-reticulospinal', ...  % 21
+%     'L-ventral-corticospinal', ...   % 22
+%     'R-ventral-corticospinal', ...   % 23
+%     'L-medial-reticulospinal', ...   % 26
+%     'R-medial-reticulospinal' ...    % 27
+% };
+% spinalTractsNum = [4, 5, 8, 9, 16, 17, 20, 21, 22, 23, 26, 27];
+% spineCombo = [1, 2, 3, 4, 5, 6, 5, 6, 7, 8, 5, 6];
+
+    if k < 3
+%         tractNames = { ...
+%             'L-lateral-corticospinal', ...   % 4
+%             'R-lateral-corticospinal', ...   % 5%     
+%             'L-ventral-corticospinal', ...   % 22
+%             'R-ventral-corticospinal', ...   % 23
+%             'L-ventrolateral-reticulospinal', ... % 16
+%             'R-ventrolateral-reticulospinal', ... % 17
+%             'L-ventral-reticulospinal', ...  % 20
+%             'R-ventral-reticulospinal', ...  % 21
+%             'L-medial-reticulospinal', ...   % 26
+%             'R-medial-reticulospinal' ...    % 27            
+%         };
+% 
+%         tractIndex = [1 2 9 10 6 7 8 9 11 12];
+
+        tractNames = { ...
+            'L-lateral-corticospinal', ...   % 4
+            'R-lateral-corticospinal', ...   % 5%     
+            'L-ventral-corticospinal', ...   % 22
+            'R-ventral-corticospinal', ...   % 23
+            'L Pont reticulospinal', ... % 16
+            'R Pont reticulospinal', ...
+            'L Med reticulospinal', ... % 16
+            'R Med reticulospinal'  
+        };
+        
+        tractIndex = [1 2 9 10 7 8 5 6];
+
+        figure;
+        hBar = barh([mean(tractsH(:, tractIndex), 'omitnan')', mean(tractsS(:, tractIndex), 'omitnan')']);
+        X=cell2mat(get(hBar,'XData')).'+[hBar.XOffset];
+        hold on  %4 runs
+        hEB = errorbar([mean(tractsH(:, tractIndex), 'omitnan')', mean(tractsS(:, tractIndex), 'omitnan')'], X, [(std(tractsH(:, tractIndex), 'omitnan')/sqrt(length(tractsH(:, tractIndex))))',  (std(tractsS(:, tractIndex), 'omitnan')/sqrt(length(tractsS(:, tractIndex))))'], 'horizontal','.', 'Color', 'black', 'Marker', 'none');  % add the errorbar
+        if k == 1 
+            randVec = (-1 + (1+1)*rand(subSplit-1, 1))/10;
+        else
+           randVec = (-1 + (1+1)*rand(subSplit, 1))/10;
+        end   
+        scatter(tractsH(:, tractIndex), [randVec+X(1,1), randVec+X(2,1), randVec+X(3,1), randVec+X(4,1), randVec+X(5,1), randVec+X(6,1), randVec+X(7,1), randVec+X(8,1)], 30, 'k','o','filled'); 
+        randVec = (-1 + (1+1)*rand(length(subName)-subSplit,1))/10;
+        scatter(tractsS(:, tractIndex), [randVec+X(1,2), randVec+X(2,2), randVec+X(3,2), randVec+X(4,2), randVec+X(5,2), randVec+X(6,2), randVec+X(7,2), randVec+X(8,2)], 30, 'k','o','filled'); 
+        % scatter(actVoxelsSeg6, [randVec+X(1,2), randVec+X(2,2), randVec+X(3,2), randVec+X(4,2)], 20, 'k','o','filled'); 
+        set (gca,'YDir','reverse')
+        yticks(1:length(1:length(tractNames))); yticklabels(tractNames)
+        ylabel('Tract')
+        xlabel('Active Voxels');
+        title(bAreas(k))
+        make_pretty
+
+    else
+%         tractNames = { ...
+%             'L-rubrospinal', ...             % 8
+%             'R-rubrospinal', ...             % 9
+%             'L-ventrolateral-reticulospinal', ... % 16
+%             'R-ventrolateral-reticulospinal', ... % 17
+%             'L-ventral-reticulospinal', ...  % 20
+%             'R-ventral-reticulospinal', ...  % 21
+%             'L-medial-reticulospinal', ...   % 26
+%             'R-medial-reticulospinal' ...    % 27
+%         };
+% 
+%         tractIndex = [4 5 6 7 8 9 11 12];
+
+        tractNames = { ...
+            'L-rubrospinal', ...             % 8
+            'R-rubrospinal', ...             % 9
+            'L Pont reticulospinal', ... % 16
+            'R Pont reticulospinal', ...
+            'L Med reticulospinal', ... % 16
+            'R Med reticulospinal'   
+        };
+        tractIndex = [3 4 7 8 5 6];
+        figure;
+        hBar = barh([mean(tractsH(:, tractIndex), 'omitnan')', mean(tractsS(:, tractIndex), 'omitnan')']);
+        X=cell2mat(get(hBar,'XData')).'+[hBar.XOffset];
+        hold on  %4 runs
+        hEB = errorbar([mean(tractsH(:, tractIndex), 'omitnan')', mean(tractsS(:, tractIndex), 'omitnan')'], X, [(std(tractsH(:, tractIndex), 'omitnan')/sqrt(length(tractsH(:, tractIndex))))',  (std(tractsS(:, tractIndex), 'omitnan')/sqrt(length(tractsS(:, tractIndex))))'], 'horizontal','.', 'Color', 'black', 'Marker', 'none');  % add the errorbar
+        if k == 1 
+            randVec = (-1 + (1+1)*rand(subSplit-1, 1))/10;
+        else
+           randVec = (-1 + (1+1)*rand(subSplit, 1))/10;
+        end   
+        scatter(tractsH(:, tractIndex), [randVec+X(1,1), randVec+X(2,1), randVec+X(3,1), randVec+X(4,1), randVec+X(5,1), randVec+X(6,1)], 30, 'k','o','filled'); 
+%         scatter(tractsH(:, tractIndex), [randVec+X(1,1), randVec+X(2,1), randVec+X(3,1), randVec+X(4,1)], 30, 'k','o','filled'); 
+        randVec = (-1 + (1+1)*rand(length(subName)-subSplit,1))/10;
+        scatter(tractsS(:, tractIndex), [randVec+X(1,2), randVec+X(2,2), randVec+X(3,2), randVec+X(4,2), randVec+X(5,2), randVec+X(6,2)], 30, 'k','o','filled'); 
+%         scatter(tractsS(:, tractIndex), [randVec+X(1,2), randVec+X(2,2), randVec+X(3,2), randVec+X(4,2)], 30, 'k','o','filled'); 
+        % scatter(actVoxelsSeg6, [randVec+X(1,2), randVec+X(2,2), randVec+X(3,2), randVec+X(4,2)], 20, 'k','o','filled'); 
+        set (gca,'YDir','reverse')
+        yticks(1:length(1:length(tractNames))); yticklabels(tractNames)
+        ylabel('Tract')
+        xlabel('Active Voxels');
+        title(bAreas(k))
+        make_pretty
+
+    end
+
+
+% %     Save the plot as a PNG image
+    saveas(gcf, ['D:\SBSN\ppi\', 'NEG_tracts_', char(bAreas(k)), '_', radius, '_spine_voxel_side_z', num2str(zScore), '.png']);
+    saveas(gcf, ['D:\SBSN\ppi\', 'NEG_tracts_', char(bAreas(k)), '_', radius, '_spine_voxel_side_z', num2str(zScore), '.svg']);
+
+
+    disp('control vs stroke')
+    for idx = 1:length(tractIndex)
+        [H,P] = ranksum(tractsH(:, tractIndex(idx)), tractsS(:, tractIndex(idx)));
+        tractNames{idx}
+        H, P
+        
+        
+        [ci95, rejectNull, diffSampMeans] = bootstrapCompMeans(tractsH(:, tractIndex(idx)), tractsS(:, tractIndex(idx)), 10000, 0.05, length(tractIndex));
+        tractNames{idx}
+        ci95, rejectNull
+    
+    end
+
+
+
+%     figure;
+%     hBar=bar([mean(zlrSeg, 'omitnan'); mean(zdvSeg, 'omitnan')]);
+%     X=cell2mat(get(hBar,'XData')).'+[hBar.XOffset];
+%     hold on  %4 runs
+%     hEB = errorbar(X, [mean(zlrSeg, 'omitnan'); mean(zdvSeg, 'omitnan')], [(std(zlrSeg, 'omitnan')/sqrt(length(zlrSeg))); (std(zdvSeg, 'omitnan')/sqrt(length(zdvSeg)))], 'vertical', '.', 'Color', 'black', 'Marker', 'none');  % add the errorbar
+%     randVec = (-1 + (1+1)*rand(length(subName), 1))/10;
+%     scatter([randVec+X(1,1), randVec+X(1,2), randVec+X(2,1), randVec+X(2,2)], [zlrSeg, zdvSeg],  30, 'k','o','filled'); 
+%     % scatter([randVec+X(2,1), randVec+X(2,2), randVec+X(2,3), randVec+X(2,4)], [zdvSeg, zdvSeg6],   20, 'k','o','filled'); 
+%     xticks(1:length(1:2)); xticklabels({'L R','V D'})
+%     xlabel('Cervical Area')
+%     ylabel('Z-score');
+%     title(bAreas(k))
+%     make_pretty
+    
+
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%     % Quad names and mapping to subplot positions
+%     quadNames = {'Left Ventral', 'Left Dorsal'; 'Right Ventral', 'Right Dorsal'};
+%     subplotPos = [1, 3; 2, 4];  % top-left=1, bottom-left=2, top-right=3, bottom-right=4
+%     
+%     N_H = numel(quadSegH);
+%     N_S = numel(quadSegS);
+%     [L, R, C] = size(quadSegH{1});   % Expect 4x2x2
+%     spinalLevels = {'C5','C6','C7','C8'};
+%     
+%     figure;
+%     for r = 1:R
+%         for c = 1:C
+%             % Extract values for this quadrant
+%             Hvals = zeros(N_H, L);
+%             for p = 1:N_H
+%                 A = quadSegH{p};
+%                 Hvals(p, :) = A(:, r, c).';
+%             end
+%             Svals = zeros(N_S, L);
+%             for p = 1:N_S
+%                 A = quadSegS{p};
+%                 Svals(p, :) = A(:, r, c).';
+%             end
+%     
+%             % Means and SEMs
+%             meanH = mean(Hvals, 1)';                   
+%             meanS = mean(Svals, 1)';                   
+%             semH  = std(Hvals,0,1)'/sqrt(N_H);      
+%             semS  = std(Svals,0,1)'/sqrt(N_S);      
+%     
+%             % Subplot in correct position
+%             subplot(2, 2, subplotPos(r, c));
+%             hold on;
+%     
+%             % Grouped horizontal bars
+%             hBar = barh([meanH, meanS]);
+%     %         if numel(hBar) >= 2
+%     %             hBar(1).FaceColor = [0.75 0.75 0.95]; % H group
+%     %             hBar(2).FaceColor = [0.95 0.75 0.75]; % S group
+%     %         end
+%     
+%             xHc = hBar(1).XEndPoints;  % centers for H bars
+%             xSc = hBar(2).XEndPoints;  % centers for S bars
+%     
+%             X = [xHc; xSc]';
+%             % Errorbars
+%             errorbar([meanH, meanS], X, [semH, semS], 'horizontal', '.', ...
+%                      'Color', 'k', 'Marker', 'none', 'LineWidth', 1);
+%             
+%             % Scatter points with jitter
+%             randVecH = (-1 + 2*rand(N_H, 1))/10;
+%             yH = [randVecH + X(1,1); randVecH + X(2,1); randVecH + X(3,1); randVecH + X(4,1)];
+%             scatter(Hvals(:), yH, 30, 'k', 'o', 'filled');
+%     
+%             randVecS = (-1 + 2*rand(N_S, 1))/10;
+%             yS = [randVecS + X(1,2); randVecS + X(2,2); randVecS + X(3,2); randVecS + X(4,2)];
+%             scatter(Svals(:), yS, 30, 'k', 'o', 'filled');
+%     
+%             % Axes, labels, title
+%             set(gca, 'YDir', 'reverse');
+%             yticks(1:L); yticklabels(spinalLevels);
+%             xlim([0 100])
+%             ylabel('Spinal Level'); xlabel('Active Voxels');
+%             title(quadNames{r,c});
+%             grid on; box off;
+%             hold off;
+%     
+%         end
+%     end
+%     make_pretty
+%     sgtitle(['Average Active Voxels by Level and Quadrant (H vs S) with Individual Subjects', char(bAreas(k)), ' ', radius] );
+
+end
+% close all

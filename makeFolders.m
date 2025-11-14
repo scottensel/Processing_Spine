@@ -1,12 +1,12 @@
-subject = 'SMA06_004';
+subject = 'SBSN_H_017';
 
-direc_start = 'D:\SMA\MRI_data_upper_limb\Spine\';
+direc_start = 'D:\SBSN\Data\Spine\';
 
 mkdir(fullfile(direc_start, subject, 'anat'))
 mkdir(fullfile(direc_start, subject, 'func'))
 mkdir(fullfile(direc_start, subject, 'physio'))
 mkdir(fullfile(direc_start, subject, 'task'))
-for i = 1:4
+for i = 0:6
     
     mkdir(fullfile(direc_start, subject, 'func', ['func' num2str(i)]))
     mkdir(fullfile(direc_start, subject, 'physio', ['physio' num2str(i)]))

@@ -33,6 +33,10 @@ echo -n "Enter the index of the step to perform (1 = Prepare for FEAT, 2 = Prepa
 tput sgr0;
 read ind
 
+
+MAX_JOBS=8
+job_count=0
+
 # For each subject
 for s in "${sub[@]}"; do
 
@@ -59,13 +63,21 @@ for s in "${sub[@]}"; do
                 echo $files_to_smooth
                 for b in $files_to_smooth; do # Loop through all files
     
-                    sct_smooth_spinalcord -i $b -s fmri_spine_moco_mean_seg_corr.nii.gz -smooth 0.849329,0.849329,2.5479870902 -o $b #smooth each file based on seg
+                    sct_smooth_spinalcord -i $b -s fmri_spine_moco_mean_seg_corr.nii.gz -smooth 0.849329,0.849329,2.5479870902 -o $b & #smooth each file based on seg
                     
                     ## dont know which is better but they produce similar outputs Centerline goes further below and above but not needed since the manual seg goes far enough especially for analysis
                     #fmri_spine_moco_mean_seg_corr.nii.gz
                     #fmri_mean_crop_centerline.nii.gz
+                    ((job_count++))
+                        if ((job_count >= MAX_JOBS)); then
+                        wait -n     # Wait for *one* job to finish before starting a new one
+                        ((job_count--))
+                    fi
+
                 done
     
+                wait 
+
                 # create a list of all the files in the smooth folder
                 allSmoothFiles=`${FSLDIR}/bin/imglob -extensions smooth/*`
                     
@@ -83,6 +95,13 @@ for s in "${sub[@]}"; do
                 echo "NOW SMOOTHING"
 
                 mkdir smooth2
+
+
+                cp physio_denoised.feat/stats/res4d.nii.gz fmri_spine_moco_denoised.nii.gz
+                
+                # copy header info
+                sct_image -i fmri_spine_moco.nii.gz -copy-header fmri_spine_moco_denoised.nii.gz -o fmri_spine_moco_denoised.nii.gz
+                                
                 
                 # split the image in t and it will add a number name to it
                 sct_image -i fmri_spine_moco_denoised.nii.gz -split t -o smooth2/fmri_spine_moco_denoised.nii.gz

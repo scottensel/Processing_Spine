@@ -7,7 +7,7 @@ clear all
 %%% SPINE
 
 % varibales to set up before
-subName = 'SMA05_004';
+subName = 'SBSN_H_018';
 disp(subName)
 
 volRemoved = 5;
@@ -16,10 +16,10 @@ TR = 2.2;
 % adding paths to the subject
 addpath('D:\NHP_code\cbiNifti')
 
-direc = fullfile('D:\SMA\MRI_data_upper_limb\Spine', subName, 'physio');
+direc = fullfile('D:\SBSN\Data\Spine', subName, 'physio');
 physio_folders = dir(direc);
 
-direc2 = fullfile('D:\SMA\MRI_data_upper_limb\Spine',subName,'func');
+direc2 = fullfile('D:\SBSN\Data\Spine',subName,'func');
 slice_number_folder = dir(direc2);
 
 %% THINGS TO ADD
@@ -28,9 +28,9 @@ slice_number_folder = dir(direc2);
 
 for folder = 3:length(physio_folders)
 
-    if contains(physio_folders(folder).name, 'physio0')
-        continue
-    end
+%     if contains(physio_folders(folder).name, 'physio0')
+%         continue
+%     end
     
     % here its just opening the txt file we need to parse through which has
     % all of our information

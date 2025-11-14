@@ -54,7 +54,6 @@ for s in "${sub[@]}"; do
         # root segmentation
         sct_deepseg -i t2.nii.gz -o t2_roots.nii.gz -task seg_spinal_rootlets_t2w
 
-
         # manual create labels instead
         #sct_label_utils -i t2.nii.gz -create-viewer 1,2,3,4,5,6,7,8 -o label_discs.nii.gz -msg "Click atthe posterior tip of C1 to C7/T1 inter-vertebral disc"
         
@@ -73,7 +72,12 @@ for s in "${sub[@]}"; do
 
         # apply tranforamtion to templates. Now they are all in subject space
         # this moves all WM, GM and CSF atlases into the subjects T2 space
-        sct_warp_template -d t2.nii.gz -w warp_anat2template.nii.gz -s 1 -a 1 #-qc $DIREC$s"/anat/"
+        sct_warp_template -d t2.nii.gz -w warp_anat2template.nii.gz -a 1 #-qc $DIREC$s"/anat/"
+
+
+        # Aggregate CSA value per level
+        sct_process_segmentation -i t2_seg.nii.gz -vert 1:8 -vertfile t2_seg_labeled.nii.gz -perlevel 1 -o csa_perlevel.csv
+        sct_process_segmentation -i t2_seg.nii.gz -vert 1:8 -vertfile t2_seg_labeled.nii.gz -perslice 1 -normalize-PAM50 1 -o csa_PAM50.csv
 
     elif [ "$ind" == "2" ]; then
 
@@ -94,6 +98,11 @@ for s in "${sub[@]}"; do
         tput sgr0;
 done
 
+
+echo
+echo "${sub[@]}"
+echo "${myFunc[@]}"
+echo
 
 ####################################
 # Display useful info for the log

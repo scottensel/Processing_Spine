@@ -119,6 +119,11 @@ for s in "${sub[@]}"; do
         	tput sgr0;		 			
 done
 
+echo
+echo "${sub[@]}"
+echo "${myFunc[@]}"
+echo
+
 ####################################
 # Display useful info for the log
 end=`date +%s`

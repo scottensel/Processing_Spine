@@ -7,7 +7,7 @@ clear all
 %%% SPINE
 
 % varibales to set up before
-subName = 'SMA05_001';
+subName = 'SMA05_004';
 disp(subName)
 
 volRemoved = 5;

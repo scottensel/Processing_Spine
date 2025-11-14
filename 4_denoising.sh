@@ -29,7 +29,7 @@ start=`date +%s`
 . /mnt/d/SMA/Processing_Spine/path_to_subjects.sh 
 
 tput setaf 6; 
-echo -n "Enter the index of the step to perform (1 = Prepare for GLM, 2 = Prepare for GLM forces, 3 = Prepare for GLM smooth forces, 4 = Denoise from Physio, 5 = 1st Level 2nd FEAT, 6 = 1st Level 2nd FEAT smoothed): "
+echo -n "Enter the index of the step to perform (1 = Denoise from Physio (1st), 2 = 1st Level FLOB FEAT (2nd), 3 = 1st Level FORCE FLOB FEAT (2nd)): "
 tput sgr0;
 read ind
 
@@ -45,7 +45,7 @@ for s in "${sub[@]}"; do
             cd $DIREC$s"/func/func"$d"/"
 
             tput setaf 2; echo "Noise regression started for " $DIREC$s"/func/func"$d	
-            if [ "$ind" -lt "5" ]; then
+            if [ "$ind" == "1" ]; then
 
                 # Generate EV for outliers
                 #if [ ! -f outliers.png ]; then
@@ -79,16 +79,8 @@ for s in "${sub[@]}"; do
             if [ "$ind" == "1" ]; then
                 templateFile="template_design.fsf"
             elif [ "$ind" == "2" ]; then
-                templateFile="template_design_force.fsf"
-            elif [ "$ind" == "3" ]; then
-                templateFile="template_design_force.fsf"
-            elif [ "$ind" == "4" ]; then
-                templateFile="template_design.fsf"
-            elif [ "$ind" == "5" ]; then
                 templateFile="template_design_FLOB.fsf"
-            elif [ "$ind" == "6" ]; then
-                templateFile="template_design_force_FLOB.fsf"
-            elif [ "$ind" == "7" ]; then
+            elif [ "$ind" == "3" ]; then
                 templateFile="template_design_force_FLOB.fsf"
             fi
 
@@ -101,56 +93,6 @@ for s in "${sub[@]}"; do
 
                 # 1 - PREPARE .fsf files properly
                 if [ "$ind" == "1" ]; then
-                    tput setaf 2; echo "Prepare first level analysis for GLM " $s"/func/func"$d
-                    tput sgr0; 
-         
-                    # this is editing the text of the files
-                    sed -e 's@PNMPATH@'$DIREC$s"/func/func"$d"/regressors_evlist.txt"'@g' \
-                                        -e 's@OUTDIR@'"level_one"'@g' \
-                                        -e 's@DATAPATH@'$DIREC$s"/func/func"$d"/fmri_spine_moco.nii.gz"'@g' \
-                                        -e 's@OUTLYN@'"1"'@g' \
-                                        -e 's@NPTS@'"$(fslnvols $DIREC$s"/func/func"$d"/fmri_spine_moco.nii.gz")"'@g' \
-                                        -e 's@EV_TITLE@'GripTask'@g' \
-                                        -e 's@EV_FILE@'$DIREC$s"/task/task"$d"/events.txt"'@g' \
-                                        -e 's@OUTLPATH@'$DIREC$s"/func/func"$d"/outliers.txt"'@g' <$i> design_levelone.fsf
-
-                elif [ "$ind" == "2" ]; then
-                    tput setaf 2; echo "Prepare first level analysis for GLM " $s"/func/func"$d
-                    tput sgr0; 
-         
-                    # this is editing the text of the files
-                    sed -e 's@PNMPATH@'$DIREC$s"/func/func"$d"/regressors_evlist.txt"'@g' \
-                                        -e 's@OUTDIR@'"level_one_force"'@g' \
-                                        -e 's@DATAPATH@'$DIREC$s"/func/func"$d"/fmri_spine_moco.nii.gz"'@g' \
-                                        -e 's@OUTLYN@'"1"'@g' \
-                                        -e 's@NPTS@'"$(fslnvols $DIREC$s"/func/func"$d"/fmri_spine_moco.nii.gz")"'@g' \
-                                        -e 's@EV_TITLE1@'20'@g' \
-                                        -e 's@EV_FILE1@'$DIREC$s"/task/task"$d"/force20.txt"'@g' \
-                                        -e 's@EV_TITLE2@'45'@g' \
-                                        -e 's@EV_FILE2@'$DIREC$s"/task/task"$d"/force45.txt"'@g' \
-                                        -e 's@EV_TITLE3@'70'@g' \
-                                        -e 's@EV_FILE3@'$DIREC$s"/task/task"$d"/force70.txt"'@g' \
-                                        -e 's@OUTLPATH@'$DIREC$s"/func/func"$d"/outliers.txt"'@g' <$i> design_levelone_force.fsf
-
-                elif [ "$ind" == "3" ]; then
-                    tput setaf 2; echo "Prepare first level analysis for GLM " $s"/func/func"$d
-                    tput sgr0; 
-         
-                    # this is editing the text of the files
-                    sed -e 's@PNMPATH@'$DIREC$s"/func/func"$d"/regressors_evlist.txt"'@g' \
-                                        -e 's@OUTDIR@'"level_one_force_smooth"'@g' \
-                                        -e 's@DATAPATH@'$DIREC$s"/func/func"$d"/fmri_spine_moco_smooth.nii.gz"'@g' \
-                                        -e 's@OUTLYN@'"1"'@g' \
-                                        -e 's@NPTS@'"$(fslnvols $DIREC$s"/func/func"$d"/fmri_spine_moco.nii.gz")"'@g' \
-                                        -e 's@EV_TITLE1@'20'@g' \
-                                        -e 's@EV_FILE1@'$DIREC$s"/task/task"$d"/force20.txt"'@g' \
-                                        -e 's@EV_TITLE2@'45'@g' \
-                                        -e 's@EV_FILE2@'$DIREC$s"/task/task"$d"/force45.txt"'@g' \
-                                        -e 's@EV_TITLE3@'70'@g' \
-                                        -e 's@EV_FILE3@'$DIREC$s"/task/task"$d"/force70.txt"'@g' \
-                                        -e 's@OUTLPATH@'$DIREC$s"/func/func"$d"/outliers.txt"'@g' <$i> design_levelone_force_smooth.fsf
-
-                elif [ "$ind" == "4" ]; then
                     tput setaf 2; echo "Prepare for by denoising PHYSIO " $s"/func/func"$d
                     tput sgr0; 
 
@@ -163,7 +105,10 @@ for s in "${sub[@]}"; do
                                         -e 's@EV_FILE@'""'@g' \
                                         -e 's@OUTLPATH@'$DIREC$s"/func/func"$d"/outliers.txt"'@g' <$i> design_denoised.fsf
 
-                elif [ "$ind" == "5" ]; then
+                elif [ "$ind" == "2" ]; then
+
+                    tput setaf 2; echo "Prepare for by FEAT on denoised data " $s"/func/func"$d
+                    tput sgr0;
 
                     # this is editing the text of the files
                     sed -e 's@OUTDIR@'"level_one_FLOB"'@g' \
@@ -173,12 +118,13 @@ for s in "${sub[@]}"; do
                                         -e 's@EV_TITLE@'GripTask'@g' \
                                         -e 's@EV_FILE@'$DIREC$s"/task/task"$d"/events.txt"'@g' <$i> design_levelone_FLOB.fsf
 
-                elif [ "$ind" == "6" ]; then
+                elif [ "$ind" == "3" ]; then
                     tput setaf 2; echo "Prepare for by FEAT on denoised data " $s"/func/func"$d
                     tput sgr0;
 
                     sed -e 's@OUTDIR@'"level_one_force_FLOB"'@g' \
-                                        -e 's@DATAPATH@'$DIREC$s"/func/func"$d"/fmri_spine_moco_denoised_plusmean.nii.gz"'@g' \
+                                        -e 's@DATAPATH@'$DIREC$s"/func/func"$d"/fmri_spine_moco_denoised_plusmean_smooth.nii.gz"'@g' \
+                                        -e 's@OUTLYN@'"1"'@g' \
                                         -e 's@NPTS@'"$(fslnvols $DIREC$s"/func/func"$d"/fmri_spine_moco.nii.gz")"'@g' \
                                         -e 's@EV_TITLE1@'20'@g' \
                                         -e 's@EV_FILE1@'$DIREC$s"/task/task"$d"/force20.txt"'@g' \
@@ -187,48 +133,12 @@ for s in "${sub[@]}"; do
                                         -e 's@EV_TITLE3@'70'@g' \
                                         -e 's@EV_FILE3@'$DIREC$s"/task/task"$d"/force70.txt"'@g' <$i> design_levelone_force_FLOB.fsf
 
-                elif [ "$ind" == "7" ]; then
-                    tput setaf 2; echo "Prepare for by FEAT on smoothed denoised data " $s"/func/func"$d
-                    tput sgr0; 
-
-                    sed -e 's@OUTDIR@'"level_one_force_smooth_FLOB"'@g' \
-                                        -e 's@DATAPATH@'$DIREC$s"/func/func"$d"/fmri_spine_moco_denoised_plusmean_smooth.nii.gz"'@g' \
-                                        -e 's@NPTS@'"$(fslnvols $DIREC$s"/func/func"$d"/fmri_spine_moco.nii.gz")"'@g' \
-                                        -e 's@EV_TITLE1@'20'@g' \
-                                        -e 's@EV_FILE1@'$DIREC$s"/task/task"$d"/force20.txt"'@g' \
-                                        -e 's@EV_TITLE2@'45'@g' \
-                                        -e 's@EV_FILE2@'$DIREC$s"/task/task"$d"/force45.txt"'@g' \
-                                        -e 's@EV_TITLE3@'70'@g' \
-                                        -e 's@EV_FILE3@'$DIREC$s"/task/task"$d"/force70.txt"'@g' <$i> design_levelone_force_smooth_FLOB.fsf
-
-
                 fi
 
                 # created a design_levelone.fsf based on the template.fsf
             done
 
             if [ "$ind" == "1" ]; then
-                tput setaf 2; echo "Run first level analysis for " $s"/func/func"$d
-                tput sgr0; 
-                
-                # Run the analysis using the fsf file
-                feat design_levelone.fsf
-            
-            elif [ "$ind" == "2" ]; then
-                tput setaf 2; echo "Run first level force analysis for " $s"/func/func"$d
-                tput sgr0; 
-                
-                # Run the analysis using the fsf file
-                feat design_levelone_force.fsf
-
-            elif [ "$ind" == "3" ]; then
-                tput setaf 2; echo "Run first level smoothed force analysis for " $s"/func/func"$d
-                tput sgr0; 
-                
-                # Run the analysis using the fsf file
-                feat design_levelone_force_smooth.fsf
-
-            elif [ "$ind" == "4" ]; then
                 tput setaf 2; echo "Run first level denoising " $s"/func/func"$d
                 tput sgr0; 
                 
@@ -247,31 +157,29 @@ for s in "${sub[@]}"; do
                 # copy header info
                 sct_image -i fmri_spine_moco.nii.gz -copy-header fmri_spine_moco_denoised_plusmean.nii.gz -o fmri_spine_moco_denoised_plusmean.nii.gz
 
-            elif [ "$ind" == "5" ]; then
+            elif [ "$ind" == "2" ]; then
                 tput setaf 2; echo "Run first level FLOB force analysis for " $s"/func/func"$d
                 tput sgr0; 
                 
                 # Run the analysis using the fsf file
                 feat design_levelone_FLOB.fsf
 
-            elif [ "$ind" == "6" ]; then
+            elif [ "$ind" == "3" ]; then
                 tput setaf 2; echo "Run first level FLOB force analysis for " $s"/func/func"$d
                 tput sgr0; 
                 
                 # Run the analysis using the fsf file
                 feat design_levelone_force_FLOB.fsf
 
-            elif [ "$ind" == "7" ]; then
-                tput setaf 2; echo "Run first level smoothed FLOB force analysis for " $s"/func/func"$d
-                tput sgr0; 
-                
-                # Run the analysis using the fsf file
-                feat design_levelone_force_smooth_FLOB.fsf
-
             fi
 
         done	 			
 done
+
+echo
+echo "${sub[@]}"
+echo "${myFunc[@]}"
+echo
 
 ####################################
 # Display useful info for the log

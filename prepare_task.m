@@ -2,7 +2,7 @@ clear all
 
 addpath('D:\NHP_code\cbiNifti')
 
-subject = 'SMA05_001';
+subject = 'SMA05_004';
 
 direc_start = 'D:\SMA\MRI_data_upper_limb\Spine';
 direc_end = '\task\';

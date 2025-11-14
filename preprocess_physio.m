@@ -7,7 +7,7 @@ clear all
 %%% SPINE
 
 % varibales to set up before
-subName = 'SBSN_S_005';
+subName = 'SBSN_H_018';
 disp(subName)
 
 volRemoved = 5;
@@ -28,9 +28,9 @@ slice_number_folder = dir(direc2);
 
 for folder = 3:length(physio_folders)
 
-    if contains(physio_folders(folder).name, 'physio0')
-        continue
-    end
+%     if contains(physio_folders(folder).name, 'physio0')
+%         continue
+%     end
     
     % here its just opening the txt file we need to parse through which has
     % all of our information

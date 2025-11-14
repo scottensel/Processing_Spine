@@ -2,7 +2,7 @@ clear all
 
 addpath('D:\NHP_code\cbiNifti')
 
-subject = 'SBSN_S_005';
+subject = 'SBSN_H_019';
 
 direc_start = 'D:\SBSN\Data\Spine';
 direc_end = '\task\';

@@ -1642,27 +1642,27 @@ end
 saveas(gcf, ['D:\SBSN\stroke\Spine_transverse_density_Control_vs_Stroke_z', num2str(zScore), '.png']);
 saveas(gcf, ['D:\SBSN\stroke\Spine_transverse_density_Control_vs_Stroke_z', num2str(zScore), '.svg']);
 
-% % ORIGINAL HEATMAP-STYLE FIGURE (unchanged logic: normalize here only)
-% 
-% planeH = planeH/max(planeH(:));
-% planeS = planeS/max(planeS(:));
-% 
-% figure;
-% subplot(1, 2, 1)
-% imagesc(fliplr(rot90(planeH(57:85,60:83))))
-% colormap('hot')
-% title('Control')
-% 
-% subplot(1, 2, 2)
-% imagesc(fliplr(rot90(planeS(57:85,60:83))))
-% colormap('hot')
-% title('Stroke')
-% 
-% colormap('hot')
-% h = colorbar('Position', [0.93 0.11 0.02 0.815]); % [x y width height]
-% 
-% saveas(gcf, ['D:\SBSN\stroke\Spine_transverse_z', num2str(zScore), '.png']);
-% saveas(gcf, ['D:\SBSN\stroke\Spine_transverse_z', num2str(zScore), '.svg']);
+% ORIGINAL HEATMAP-STYLE FIGURE (unchanged logic: normalize here only)
+
+planeH = planeH/max(planeH(:));
+planeS = planeS/max(planeS(:));
+
+figure;
+subplot(1, 2, 1)
+imagesc(fliplr(rot90(planeH(57:85,60:83))))
+colormap('hot')
+title('Control')
+
+subplot(1, 2, 2)
+imagesc(fliplr(rot90(planeS(57:85,60:83))))
+colormap('hot')
+title('Stroke')
+
+colormap('hot')
+h = colorbar('Position', [0.93 0.11 0.02 0.815]); % [x y width height]
+
+saveas(gcf, ['D:\SBSN\stroke\Spine_transverse_z', num2str(zScore), '.png']);
+saveas(gcf, ['D:\SBSN\stroke\Spine_transverse_z', num2str(zScore), '.svg']);
 
 %%
 function plotCreator(value,len)

@@ -79,7 +79,7 @@ for s in "${sub[@]}"; do
                 # --csfmask filename of csf mask image (and generate csf regressor)
                 # --sliceorder specify slice ordering (up/down/interleaved_up/interleaved_down)
                 # --slicedir specify slice direction (x/y/z) - default is z
-                #--slicetiming   specify slice timing via an external file
+                # --slicetiming   specify slice timing via an external file
 			
 			else
 				tput setaf 1; 
@@ -93,6 +93,11 @@ for s in "${sub[@]}"; do
                 tput sgr0;
 
 done
+
+echo
+echo "${sub[@]}"
+echo "${myFunc[@]}"
+echo
 
 ####################################
 # Display useful info for the log

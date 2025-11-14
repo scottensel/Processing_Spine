@@ -37,7 +37,7 @@ DIREC="/mnt/d/SBSN/Data/Spine/"
 echo $DIREC
 
 echo "Choose a Subject"
-mySub=("SBSN_H_" "SBSN_M_" "SBSN_S_")
+mySub=("SBSN_H_" "SBSN_S_")
 for i in ${!mySub[@]}; do
   echo "$i -> path ${mySub[$i]}" 
 done
@@ -75,13 +75,16 @@ done
 
 
 echo "Choose Functional Files to run"
-echo "Enter a for all"
+echo "Enter a for all, aa for 1-4"
 tput setaf 6; 
 read -p "Enter Functional Runs to Process: " -a myFunc
 tput sgr0;
 
 if [ "$myFunc" == "a" ]; then
     myFunc=(1 2 3 4 5 6)
+fi
+if [ "$myFunc" == "aa" ]; then
+    myFunc=(1 2 3 4)
 fi
 
 echo $DIREC
